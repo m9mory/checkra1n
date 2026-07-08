@@ -79,6 +79,7 @@ struct ContentView: View {
     }
 
     /// Logo: user icon loaded from bundle, red circle if missing
+    @ViewBuilder
     private var logoView: some View {
         if let path = Bundle.main.path(forResource: "logo", ofType: "png"),
            let img = UIImage(contentsOfFile: path) {
