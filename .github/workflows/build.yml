@@ -120,35 +120,32 @@ jobs:
       # ------------------------------------------------------------------
       # 7. Publish to GitHub Releases
       # ------------------------------------------------------------------
+      - name: Prepare release notes
+        run: |
+          {
+            echo '## 🔓 checkra1n 0.13.3 beta — Nightly Build'
+            echo ''
+            echo 'Автоматическая сборка из ветки `${{ github.ref_name }}`.'
+            echo ''
+            echo '| | |'
+            echo '|---|---|'
+            echo '| **Коммит** | [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) |'
+            echo '| **Дата** | '"$(date -u +'%Y-%m-%d %H:%M UTC')"' |'
+            echo ''
+            echo '### Установка'
+            echo 'Используй **AltStore**, **Sideloadly** или **SideStore** чтобы подписать IPA своим Apple ID.'
+            echo ''
+            echo '> ⚠️ Это пре-релиз для тестирования. Может содержать баги.'
+          } > /tmp/notes.md
+
       - name: Publish to GitHub Releases
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Delete old nightly
           gh release delete nightly --yes --cleanup-tag 2>/dev/null || true
           git push origin :refs/tags/nightly 2>/dev/null || true
-
-          # New tag at current commit
           git tag -f nightly
           git push origin nightly --force
-
-          # Write release notes (heredoc: unquoted → shell expands $(date), backticks escaped)
-          cat > /tmp/notes.md << ENDNOTES
-        ## 🔓 checkra1n 0.13.3 beta — Nightly Build
-
-        Автоматическая сборка из ветки \`${{ github.ref_name }}\`.
-
-        | | |
-        |---|---|
-        | **Коммит** | [\`${{ github.sha }}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) |
-        | **Дата** | $(date -u +"%Y-%m-%d %H:%M UTC") |
-
-        ### Установка
-        Используй **AltStore**, **Sideloadly** или **SideStore** чтобы подписать IPA своим Apple ID.
-
-        > ⚠️ Это пре-релиз для тестирования. Может содержать баги.
-        ENDNOTES
-
           gh release create nightly checkra1n.ipa \
             --title "Nightly Build" \
             --notes-file /tmp/notes.md \
