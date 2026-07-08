@@ -54,7 +54,7 @@ jobs:
         run: bash scripts/generate_icons.sh "$(pwd)"
 
       - name: Generate Xcode project (XcodeGen)
-        run: xcodegen generate --spec project.yml --project checkra1n
+        run: xcodegen generate --spec project.yml
 
       # ------------------------------------------------------------------
       # 4. Build unsigned .app with xcodebuild
@@ -88,13 +88,9 @@ jobs:
           echo "✔ Found: $APP_PATH"
 
           # Pseudo-sign binary with ldid (if available)
-          if command -v ldid &>/dev/null && [ "${{ github.event.inputs.signing }}" != "unsigned" ]; then
+          if command -v ldid >/dev/null 2>&1 && [ "${{ github.event.inputs.signing }}" != "unsigned" ]; then
             echo "→ Pseudo-signing with ldid…"
             ldid -S"$(pwd)/checkra1n.entitlements" "$APP_PATH/checkra1n" || true
-            # Also sign any embedded frameworks/dylibs (none here, but safe)
-            find "$APP_PATH" -type f \( -perm +111 -o -name "*.dylib" \) | while read f; do
-              ldid -S"$(pwd)/checkra1n.entitlements" "$f" 2>/dev/null || true
-            done
             echo "✔ ldid pseudo-signing complete"
           else
             echo "→ Skipping pseudo-sign (unsigned IPA)"
