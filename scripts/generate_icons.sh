@@ -12,7 +12,7 @@ OUT_DIR="$SRCROOT/Resources/Assets.xcassets/AppIcon.appiconset"
 # ---------- helper: resize one icon with sips ----------
 resize() {
     local in="$1" out="$2" size="$3"
-    sips -z "$size" "$size" "$in" --out "$out" &>/dev/null
+    sips -z "$size" "$size" "$in" --out "$out" >/dev/null 2>&1
 }
 
 # ---------- fallback: generate a checkra1n-style icon in pure Python ----------
@@ -133,24 +133,25 @@ else
 fi
 
 # ---------- resize to all required dimensions ----------
-declare -A SIZES=(
-    ["icon-20@2x.png"]=40
-    ["icon-20@3x.png"]=60
-    ["icon-29@2x.png"]=58
-    ["icon-29@3x.png"]=87
-    ["icon-40@2x.png"]=80
-    ["icon-40@3x.png"]=120
-    ["icon-60@2x.png"]=120
-    ["icon-60@3x.png"]=180
-    ["icon-76@1x.png"]=76
-    ["icon-76@2x.png"]=152
-    ["icon-83.5@2x.png"]=167
-)
+# bash 3.2 compat: "name size" pairs, not associative array
+SIZES="
+icon-20@2x.png 40
+icon-20@3x.png 60
+icon-29@2x.png 58
+icon-29@3x.png 87
+icon-40@2x.png 80
+icon-40@3x.png 120
+icon-60@2x.png 120
+icon-60@3x.png 180
+icon-76@1x.png 76
+icon-76@2x.png 152
+icon-83.5@2x.png 167
+"
 
-for fname in "${!SIZES[@]}"; do
-    size="${SIZES[$fname]}"
+echo "$SIZES" | while read -r fname size; do
+    [ -z "$fname" ] && continue
     echo "  → $fname (${size}×${size})"
-    resize "$BASE_1024" "$OUT_DIR/$fname" "$size"
+    resize "$BASE_1024" "$OUT_DIR/$fname" "$size" || true
 done
 
 # 1024 is already done
