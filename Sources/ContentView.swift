@@ -60,8 +60,8 @@ struct ContentView: View {
                 .padding(.top, 4)
 
             VStack(spacing: 2) {
-                Text("A5 – A13  ·  iOS 12.0 – 17.6.1")
-                Text("iPhone 4S – iPhone 14 Pro Max")
+                Text("A5 – A19  ·  iOS 12.0 – 27.0")
+                Text("iPhone 4S – iPhone 17 Pro Max")
             }
             .font(.custom("Menlo", size: 11))
             .foregroundColor(.green.opacity(0.35))

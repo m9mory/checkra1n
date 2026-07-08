@@ -150,11 +150,29 @@ icon-83.5@2x.png 167
 
 echo "$SIZES" | while read -r fname size; do
     [ -z "$fname" ] && continue
+    out="$OUT_DIR/$fname"
     echo "  → $fname (${size}×${size})"
-    resize "$BASE_1024" "$OUT_DIR/$fname" "$size" || true
+    if ! resize "$BASE_1024" "$out" "$size"; then
+        echo "  ✗ FAILED to resize $fname — retrying…"
+        resize "$BASE_1024" "$out" "$size" || {
+            echo "  ✗ FATAL: cannot generate $fname"; exit 1;
+        }
+    fi
+    [ -s "$out" ] || { echo "  ✗ FATAL: $fname is empty"; exit 1; }
 done
 
 # 1024 is already done
 echo "  → icon-1024@1x.png (1024×1024) — done"
+
+echo ''
+echo '==> Verifying generated icons…'
+count=$(ls -1 "$OUT_DIR"/icon-*.png 2>/dev/null | wc -l | tr -d ' ')
+echo "  → $count icon files found:"
+ls -lh "$OUT_DIR"/icon-*.png 2>/dev/null | while read -r ln; do echo "     $ln"; done
+
+if [ "$count" -lt 10 ]; then
+    echo "  ✗ FATAL: expected ≥10 icon files, got $count"
+    exit 1
+fi
 
 echo '==> Icons generated successfully!'

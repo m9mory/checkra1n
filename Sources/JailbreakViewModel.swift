@@ -15,10 +15,10 @@ final class JailbreakViewModel: ObservableObject {
         let bootLogs: [String] = [
             "[*] checkra1n 0.13.3 beta — \"odyssey edition\"",
             "[*] Initializing exploit environment...",
-            "[*] Device: iPhone12,1 (A13 Bionic)",
-            "[*] iOS version: 17.6.1 (21G93)",
+            "[*] Device: iPhone18,1 (A19 Pro)",
+            "[*] iOS version: 27.0 (24A335)",
             "[*] Build: checkra1n-0.13.3~beta+20260708",
-            "[*] Compiler: Apple clang 16.0 (arm64e)",
+            "[*] Compiler: Apple clang 17.0 (arm64e)",
             "",
             "[*] Enumerating USB devices...",
             "[✓] DFU device found @ 0x05ac:0x12a8",
@@ -34,16 +34,16 @@ final class JailbreakViewModel: ObservableObject {
 
         let exploitChain: [String] = [
             "",
-            "[*] Exploiting checkm8 (A13, t8015)...",
+            "[*] Exploiting checkm8 (A19 Pro, t8140)...",
             "[*] Setting up heap feng-shui...",
             "[✓] use-after-free triggered @ 0xfffffff00837a000",
             "[✓] checkm8 SUCCESS — device entered pwned DFU",
             "[*] Uploading iBSS payload...",
             "[✓] iBSS running — booting PongoOS...",
             "[*] Handshaking with PongoOS...",
-            "[✓] PongoOS v2.7.1 alive",
-            "[*] Pushing kernel patchset (794 patches)...",
-            "[✓] Kernelcache decompressed: 24 MB",
+            "[✓] PongoOS v2.9.3 alive",
+            "[*] Pushing kernel patchset (1 247 patches)...",
+            "[✓] Kernelcache decompressed: 47 MB",
         ]
 
         let lateLogs: [String] = [

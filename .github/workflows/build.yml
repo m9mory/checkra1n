@@ -54,7 +54,11 @@ jobs:
       # 3. Generate icons & Xcode project
       # ------------------------------------------------------------------
       - name: Generate app icons
-        run: bash scripts/generate_icons.sh "$(pwd)"
+        run: |
+          bash scripts/generate_icons.sh "$(pwd)"
+          echo ''
+          echo '==> Verifying icon files in Assets:'
+          find Resources/Assets.xcassets/AppIcon.appiconset -type f -name '*.png' -exec ls -lh {} \;
 
       - name: Generate Xcode project (XcodeGen)
         run: xcodegen generate --spec project.yml
