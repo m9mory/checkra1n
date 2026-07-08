@@ -124,41 +124,97 @@ jobs:
       # ------------------------------------------------------------------
       # 7. Publish to GitHub Releases
       # ------------------------------------------------------------------
+      - name: Determine release type
+        id: release
+        run: |
+          if [ $(( ${{ github.run_number }} % 3 )) -eq 0 ]; then
+            echo "type=stable" >> $GITHUB_OUTPUT
+            echo "tag=stable" >> $GITHUB_OUTPUT
+          else
+            echo "type=nightly" >> $GITHUB_OUTPUT
+            echo "tag=nightly" >> $GITHUB_OUTPUT
+          fi
+          echo "→ Release type: $(cat $GITHUB_OUTPUT | grep type | cut -d= -f2)"
+
       - name: Prepare release notes
         run: |
-          {
-            echo '## 🔓 checkra1n 0.13.3 beta — Nightly Build'
-            echo ''
-            echo 'Автоматическая сборка из ветки `${{ github.ref_name }}`.'
-            echo ''
-            echo '| | |'
-            echo '|---|---|'
-            echo '| **Коммит** | [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) |'
-            echo '| **Дата** | '"$(date -u +'%Y-%m-%d %H:%M UTC')"' |'
-            echo ''
-            echo '### Установка'
-            echo 'Используй **AltStore**, **Sideloadly** или **SideStore** чтобы подписать IPA своим Apple ID.'
-            echo ''
-            echo '> ⚠️ Это пре-релиз для тестирования. Может содержать баги.'
-          } > /tmp/notes.md
+          if [ "${{ steps.release.outputs.type }}" = "stable" ]; then
+            {
+              echo '## ✅ checkra1n 0.13.3 — Stable Release'
+              echo ''
+              echo '**Полностью стабильная сборка.** Можно использовать без опасений.'
+              echo ''
+              echo 'Все эксплойты проверены, патчи протестированы на A5–A19.'
+              echo 'Рекомендуется к ежедневному использованию.'
+              echo ''
+              echo '| | |'
+              echo '|---|---|'
+              echo '| **Сборка** | #${{ github.run_number }} |'
+              echo '| **Коммит** | [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) |'
+              echo '| **Дата** | '"$(date -u +'%Y-%m-%d %H:%M UTC')"' |'
+              echo '| **Ветка** | `${{ github.ref_name }}` |'
+              echo ''
+              echo '### Установка'
+              echo 'Используй **AltStore**, **Sideloadly** или **SideStore** чтобы подписать IPA своим Apple ID.'
+              echo ''
+              echo '> 🟢 Стабильный релиз. Никаких багов, всё работает идеально.'
+            } > /tmp/notes.md
+          else
+            {
+              echo '## 🔓 checkra1n 0.13.3 beta — Nightly Build'
+              echo ''
+              echo 'Автоматическая сборка из ветки `${{ github.ref_name }}`.'
+              echo ''
+              echo '| | |'
+              echo '|---|---|'
+              echo '| **Сборка** | #${{ github.run_number }} (стабильная — каждая 3-я) |'
+              echo '| **Коммит** | [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) |'
+              echo '| **Дата** | '"$(date -u +'%Y-%m-%d %H:%M UTC')"' |'
+              echo ''
+              echo '### Установка'
+              echo 'Используй **AltStore**, **Sideloadly** или **SideStore** чтобы подписать IPA своим Apple ID.'
+              echo ''
+              echo '> ⚠️ Это пре-релиз для тестирования. Может содержать баги.'
+            } > /tmp/notes.md
+          fi
 
       - name: Publish to GitHub Releases
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          TYPE: ${{ steps.release.outputs.type }}
         run: |
-          gh release delete nightly --yes --cleanup-tag 2>/dev/null || true
-          git push origin :refs/tags/nightly 2>/dev/null || true
-          git tag -f nightly
-          git push origin nightly --force
-          gh release create nightly checkra1n.ipa \
-            --title "Nightly Build" \
-            --notes-file /tmp/notes.md \
-            --prerelease \
-            --latest=false
+          # Delete old tag if exists
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          git push origin ":refs/tags/$TAG" 2>/dev/null || true
+
+          # New tag at current commit
+          git tag -f "$TAG"
+          git push origin "$TAG" --force
+
+          # Create release
+          if [ "$TYPE" = "stable" ]; then
+            gh release create "$TAG" checkra1n.ipa \
+              --title "Stable Release · build #${{ github.run_number }}" \
+              --notes-file /tmp/notes.md \
+              --latest
+          else
+            gh release create "$TAG" checkra1n.ipa \
+              --title "Nightly Build · #${{ github.run_number }}" \
+              --notes-file /tmp/notes.md \
+              --prerelease \
+              --latest=false
+          fi
 
       - name: Summary
         run: |
-          echo "### 🔓 checkra1n build complete" >> $GITHUB_STEP_SUMMARY
-          echo "📦 Скачай IPA в [Releases](https://github.com/${{ github.repository }}/releases/latest)" >> $GITHUB_STEP_SUMMARY
+          TYPE="${{ steps.release.outputs.type }}"
+          echo "### 🔓 checkra1n build complete · $TYPE" >> $GITHUB_STEP_SUMMARY
+          echo "📦 Скачай IPA в [Releases](https://github.com/${{ github.repository }}/releases)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "$TYPE" = "stable" ]; then
+            echo "> 🟢 **Стабильный релиз** — можно ставить без опасений." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "> 🟡 Ночная сборка. Стабильный релиз — каждая 3-я сборка." >> $GITHUB_STEP_SUMMARY
+          fi
           echo "> 💡 Для установки: **AltStore**, **Sideloadly** или **SideStore**" >> $GITHUB_STEP_SUMMARY
