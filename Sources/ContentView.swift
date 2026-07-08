@@ -49,14 +49,12 @@ struct ContentView: View {
                              temp: temp, description: description)
             }
 
-            // Single persistent logo — appears during boot, stays through jailbreak
-            if showPersistentLogo {
-                checkra1nLogo
-                    .opacity(persistentLogoOpacity)
-                    .allowsHitTesting(false)
-                    .animation(.none, value: bootPhase)
-                    .animation(.none, value: appState)
-            }
+            // Single persistent logo — always in tree, opacity controls visibility
+            checkra1nLogo
+                .opacity(persistentLogoOpacity)
+                .allowsHitTesting(false)
+                .animation(.none, value: bootPhase)
+                .animation(.none, value: appState)
         }
         .animation(.easeInOut(duration: 0.3), value: appState)
         .statusBar(hidden: appState == .booting || appState == .jailbreaking)
@@ -215,14 +213,14 @@ struct ContentView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            // Apple logo — fades in/out with animation
+            // Apple logo — no animation, appears/disappears instantly
             Image(systemName: "applelogo")
                 .font(.system(size: 100))
                 .foregroundColor(.white)
                 .opacity(bootPhase == .appleLogo ? 1 : 0)
                 .offset(y: -40)
+                .animation(.none, value: bootPhase)
         }
-        .animation(.easeInOut(duration: 0.5), value: bootPhase)
     }
 
     // MARK: - checkra1n logo (reusable)
