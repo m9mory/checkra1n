@@ -195,10 +195,11 @@ struct ContentView: View {
                 .opacity(bootPhase == .appleLogo ? 1 : 0)
                 .scaleEffect(bootPhase == .appleLogo ? 1 : 1.3)
 
-            // checkra1n logo (circle + checkmark)
+            // checkra1n logo (circle + checkmark) — appears abruptly, no animation
             checkra1nLogo
                 .opacity(bootPhase == .checkra1n ? 1 : 0)
                 .scaleEffect(bootPhase == .checkra1n ? 1 : 0.6)
+                .animation(.none, value: bootPhase)
         }
         .animation(.easeInOut(duration: 0.5), value: bootPhase)
     }
@@ -221,9 +222,9 @@ struct ContentView: View {
 
     var jailbreakScreen: some View {
         ZStack {
-            // Centered logo — watermarked, stays in place
+            // Centered logo — stays visible until weather result
             checkra1nLogo
-                .opacity(0.18)
+                .opacity(0.28)
                 .allowsHitTesting(false)
 
             // Full-screen logs on top
