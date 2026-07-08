@@ -122,9 +122,9 @@ struct ContentView: View {
         let isSelected = selectedPM == pm
         let (symbol, color): (String, Color) = {
             switch pm {
-            case .sileo: return ("app.badge.fill", Color(red: 0.2, g: 0.75, b: 0.85))
-            case .cydia: return ("shippingbox.fill", Color(red: 0.7, g: 0.4, b: 0.2))
-            case .zebra: return ("square.grid.3x3.fill", Color(red: 0.55, g: 0.55, b: 0.55))
+            case .sileo: return ("app.badge.fill", Color(red: 0.2, green: 0.75, blue: 0.85))
+            case .cydia: return ("shippingbox.fill", Color(red: 0.7, green: 0.4, blue: 0.2))
+            case .zebra: return ("square.grid.3x3.fill", Color(red: 0.55, green: 0.55, blue: 0.55))
             }
         }()
 
