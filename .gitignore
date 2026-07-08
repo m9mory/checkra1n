@@ -1,0 +1,16 @@
+# Xcode
+*.xcworkspace
+*.xcuserdata
+DerivedData/
+build/
+*.xcarchive
+
+# XcodeGen generated
+checkra1n.xcodeproj/
+
+# Generated icons (recreated by script)
+Resources/Assets.xcassets/AppIcon.appiconset/icon-*.png
+
+# macOS
+.DS_Store
+.claude/

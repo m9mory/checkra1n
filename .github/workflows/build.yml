@@ -1,0 +1,127 @@
+name: Build checkra1n
+
+on:
+  workflow_dispatch:
+    inputs:
+      signing:
+        description: 'Signing method'
+        type: choice
+        default: 'ldid'
+        options:
+          - ldid
+          - unsigned
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build checkra1n IPA
+    runs-on: macos-latest
+
+    steps:
+      # ------------------------------------------------------------------
+      # 1. Checkout
+      # ------------------------------------------------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------
+      # 2. Toolchain
+      # ------------------------------------------------------------------
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Install ldid (for pseudo-signing)
+        if: ${{ github.event.inputs.signing == 'ldid' || github.event.inputs.signing == '' }}
+        run: brew install ldid
+
+      # ------------------------------------------------------------------
+      # 3. Generate icons & Xcode project
+      # ------------------------------------------------------------------
+      - name: Generate app icons
+        run: bash scripts/generate_icons.sh "$(pwd)"
+
+      - name: Generate Xcode project (XcodeGen)
+        run: xcodegen generate --spec project.yml --project checkra1n
+
+      # ------------------------------------------------------------------
+      # 4. Build unsigned .app with xcodebuild
+      # ------------------------------------------------------------------
+      - name: Build for iOS device
+        run: |
+          xcodebuild build \
+            -project checkra1n.xcodeproj \
+            -scheme checkra1n \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath ./DerivedData \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            ONLY_ACTIVE_ARCH=NO
+
+      # ------------------------------------------------------------------
+      # 5. Package .app → .ipa
+      # ------------------------------------------------------------------
+      - name: Locate .app and prepare Payload
+        run: |
+          APP_PATH=$(find ./DerivedData/Build/Products -name "checkra1n.app" -type d | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ Could not find checkra1n.app in DerivedData"
+            find ./DerivedData -name "*.app" -type d || true
+            exit 1
+          fi
+          echo "✔ Found: $APP_PATH"
+
+          # Pseudo-sign binary with ldid (if available)
+          if command -v ldid &>/dev/null && [ "${{ github.event.inputs.signing }}" != "unsigned" ]; then
+            echo "→ Pseudo-signing with ldid…"
+            ldid -S"$(pwd)/checkra1n.entitlements" "$APP_PATH/checkra1n" || true
+            # Also sign any embedded frameworks/dylibs (none here, but safe)
+            find "$APP_PATH" -type f \( -perm +111 -o -name "*.dylib" \) | while read f; do
+              ldid -S"$(pwd)/checkra1n.entitlements" "$f" 2>/dev/null || true
+            done
+            echo "✔ ldid pseudo-signing complete"
+          else
+            echo "→ Skipping pseudo-sign (unsigned IPA)"
+          fi
+
+          # Package into IPA
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          zip -r9 "checkra1n.ipa" Payload
+          rm -rf Payload
+          echo "✔ IPA created: checkra1n.ipa ($(du -sh checkra1n.ipa | cut -f1))"
+
+      # ------------------------------------------------------------------
+      # 6. Upload artifact
+      # ------------------------------------------------------------------
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkra1n
+          path: checkra1n.ipa
+          retention-days: 30
+          compression-level: 0
+
+      - name: Summary
+        run: |
+          echo "### 🔓 checkra1n build complete" >> $GITHUB_STEP_SUMMARY
+          echo "Download the IPA from the **Artifacts** section above." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> 💡 To install: use **AltStore**, **Sideloadly**, or **SideStore**" >> $GITHUB_STEP_SUMMARY
+          echo "> to sign the IPA with your Apple ID and sideload it." >> $GITHUB_STEP_SUMMARY

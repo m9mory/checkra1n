@@ -1,0 +1,45 @@
+name: checkra1n
+options:
+  bundleIdPrefix: com.checkra1n
+  deploymentTarget:
+    iOS: "15.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    DEVELOPMENT_TEAM: ""
+    PROVISIONING_PROFILE_SPECIFIER: ""
+
+targets:
+  checkra1n:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+        type: group
+    resources:
+      - path: Resources
+        type: group
+    settings:
+      base:
+        INFOPLIST_FILE: Resources/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.checkra1n.ios
+        PRODUCT_NAME: checkra1n
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: "NO"
+    preBuildScripts:
+      - name: "Generate App Icons"
+        script: |
+          set -e
+          SCRIPT_DIR="$SRCROOT/scripts"
+          if [ -f "$SCRIPT_DIR/generate_icons.sh" ]; then
+            bash "$SCRIPT_DIR/generate_icons.sh" "$SRCROOT"
+          fi
+        basedOnDependencyAnalysis: false
+        inputFiles: []
+        outputFiles: []
