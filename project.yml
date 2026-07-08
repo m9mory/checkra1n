@@ -25,6 +25,9 @@ targets:
       - path: Resources/Assets.xcassets
         type: group
       - path: Resources/Info.plist
+      - path: Resources/logo.png
+        type: file
+        optional: true
     settings:
       base:
         INFOPLIST_FILE: Resources/Info.plist

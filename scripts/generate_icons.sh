@@ -175,4 +175,16 @@ if [ "$count" -lt 10 ]; then
     exit 1
 fi
 
+# ---------- copy logo for in-app use ----------
+echo ''
+echo '==> Preparing in-app logo…'
+LOGO_DST="$SRCROOT/Resources/logo.png"
+if [ -f "$SRC_ICON" ]; then
+    cp "$SRC_ICON" "$LOGO_DST"
+    echo "  → Copied user icon → Resources/logo.png"
+else
+    cp "$BASE_1024" "$LOGO_DST"
+    echo "  → Copied fallback icon → Resources/logo.png"
+fi
+
 echo '==> Icons generated successfully!'

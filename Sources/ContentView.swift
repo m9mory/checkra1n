@@ -49,8 +49,11 @@ struct ContentView: View {
                              temp: temp, description: description)
             }
 
-            // Single persistent logo — always in tree, opacity controls visibility
-            checkra1nLogo
+            // Single persistent logo — user icon, always in tree
+            Image("logo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 80, height: 80)
                 .opacity(persistentLogoOpacity)
                 .allowsHitTesting(false)
                 .animation(.none, value: bootPhase)
@@ -220,20 +223,6 @@ struct ContentView: View {
                 .opacity(bootPhase == .appleLogo ? 1 : 0)
                 .offset(y: -40)
                 .animation(.none, value: bootPhase)
-        }
-    }
-
-    // MARK: - checkra1n logo (reusable)
-
-    var checkra1nLogo: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.white, lineWidth: 2.5)
-                .frame(width: 80, height: 80)
-
-            Image(systemName: "checkmark")
-                .font(.system(size: 38, weight: .bold))
-                .foregroundColor(.white)
         }
     }
 
