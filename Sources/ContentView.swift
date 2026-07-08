@@ -78,12 +78,19 @@ struct ContentView: View {
         }
     }
 
-    /// Logo: user icon from asset catalog
+    /// Logo: user icon loaded from bundle, red circle if missing
     private var logoView: some View {
-        Image("Logo")
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(width: 80, height: 80)
+        if let path = Bundle.main.path(forResource: "logo", ofType: "png"),
+           let img = UIImage(contentsOfFile: path) {
+            Image(uiImage: img)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 80, height: 80)
+        } else {
+            Circle()
+                .fill(Color.red)
+                .frame(width: 80, height: 80)
+        }
     }
 
     // MARK: - Welcome screen
