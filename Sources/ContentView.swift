@@ -49,11 +49,8 @@ struct ContentView: View {
                              temp: temp, description: description)
             }
 
-            // Single persistent logo — user icon, always in tree
-            Image("logo")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 80, height: 80)
+            // Single persistent logo — user icon with fallback
+            logoView
                 .opacity(persistentLogoOpacity)
                 .allowsHitTesting(false)
                 .animation(.none, value: bootPhase)
@@ -78,6 +75,26 @@ struct ContentView: View {
         case .booting: return 1.0
         case .jailbreaking: return 0.28
         default: return 0
+        }
+    }
+
+    /// Logo: user icon from asset catalog, or fallback checkra1n circle
+    @ViewBuilder
+    private var logoView: some View {
+        if UIImage(named: "Logo") != nil {
+            Image("Logo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 80, height: 80)
+        } else {
+            ZStack {
+                Circle()
+                    .stroke(Color.white, lineWidth: 2.5)
+                    .frame(width: 80, height: 80)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 38, weight: .bold))
+                    .foregroundColor(.white)
+            }
         }
     }
 
