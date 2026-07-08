@@ -50,6 +50,7 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: appState)
+        .statusBar(hidden: appState == .booting)
     }
 
     // MARK: - Welcome screen
@@ -216,23 +217,29 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Jailbreak screen (logo + logs)
+    // MARK: - Jailbreak screen (centered logo, logs overlaid)
 
     var jailbreakScreen: some View {
-        HStack(spacing: 0) {
-            // Logs — left side
+        ZStack {
+            // Centered logo — watermarked, stays in place
+            checkra1nLogo
+                .opacity(0.18)
+                .allowsHitTesting(false)
+
+            // Full-screen logs on top
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 1) {
                         ForEach(Array(viewModel.logLines.enumerated()), id: \.offset) { idx, line in
                             Text(highlightLine(line))
-                                .font(.custom("Menlo", size: 9))
+                                .font(.custom("Menlo", size: 10))
                                 .foregroundColor(.green)
                                 .id(idx)
                         }
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 14)
+                    .padding(.horizontal, 8)
+                    .padding(.top, 14)
+                    .padding(.bottom, 40)
                 }
                 .onChange(of: viewModel.logLines.count) { _ in
                     if let last = viewModel.logLines.indices.last {
@@ -242,18 +249,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .frame(maxWidth: .infinity)
-
-            // Logo — right side, pinned
-            VStack {
-                Spacer()
-                checkra1nLogo
-                    .opacity(0.7)
-                    .padding(.trailing, 12)
-                Spacer()
-            }
-            .frame(width: 110)
-            .background(Color.black)
+            .background(Color.black.opacity(0.92))
         }
     }
 
