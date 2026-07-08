@@ -217,9 +217,10 @@ struct ContentView: View {
 
             // Apple logo — fades in/out with animation
             Image(systemName: "applelogo")
-                .font(.system(size: 72))
+                .font(.system(size: 100))
                 .foregroundColor(.white)
                 .opacity(bootPhase == .appleLogo ? 1 : 0)
+                .offset(y: -40)
         }
         .animation(.easeInOut(duration: 0.5), value: bootPhase)
     }
@@ -247,7 +248,7 @@ struct ContentView: View {
                     ForEach(Array(viewModel.logLines.enumerated()), id: \.offset) { idx, line in
                         Text(highlightLine(line))
                             .font(.custom("Menlo", size: 10))
-                            .foregroundColor(.green)
+                            .foregroundColor(.white)
                             .id(idx)
                     }
                 }
@@ -306,7 +307,7 @@ struct ContentView: View {
 
     private func highlightLine(_ line: String) -> AttributedString {
         var attr = AttributedString(line)
-        attr.foregroundColor = .green
+        attr.foregroundColor = .white
         for marker in ["[*]", "[✓]", "[!]", "[+]", "[-]", "[?]"] {
             if let range = attr.range(of: marker) {
                 attr[range].foregroundColor = .white
