@@ -94,13 +94,33 @@ jobs:
           fi
           echo "✔ Found: $APP_PATH"
 
-          # DEBUG: verify logo.png is in the bundle
+          # Compile asset catalog manually (XcodeGen skips it)
           echo ''
-          echo '==> Verifying bundle contents:'
-          find "$APP_PATH" -name "*.png" -o -name "logo*" | while read -r f; do
-            echo "     $f ($(stat -f%z "$f" 2>/dev/null || echo '?'))"
-          done
+          echo '==> Compiling asset catalog…'
+          ACTOOL="/Applications/Xcode.app/Contents/Developer/usr/bin/actool"
+          if [ -x "$ACTOOL" ]; then
+            "$ACTOOL" Resources/Assets.xcassets \
+              --compile "$APP_PATH" \
+              --platform iphoneos \
+              --minimum-deployment-target 15.0 \
+              --app-icon AppIcon \
+              --output-partial-info-plist /dev/null \
+              --development-region ru
+            echo "✔ Assets.car compiled"
+          else
+            echo "⚠ actool not found"
+          fi
+
+          # Manually copy logo.png into app bundle
+          if [ -f Resources/logo.png ]; then
+            cp Resources/logo.png "$APP_PATH/logo.png"
+            echo "✔ logo.png → bundle"
+          fi
+
+          # Verify final bundle
           echo ''
+          echo '==> Bundle contents:'
+          ls -la "$APP_PATH/"
 
           # Pseudo-sign binary with ldid (if available)
           if command -v ldid >/dev/null 2>&1 && [ "${{ github.event.inputs.signing }}" != "unsigned" ]; then
