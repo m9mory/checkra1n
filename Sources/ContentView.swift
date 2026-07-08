@@ -78,10 +78,10 @@ struct ContentView: View {
         }
     }
 
-    /// Logo: user icon from bundle, loaded via UIImage(named:)
+    /// Logo: user icon loaded by every possible method
     @ViewBuilder
     private var logoView: some View {
-        if let img = UIImage(named: "logo") {
+        if let img = loadLogoImage() {
             Image(uiImage: img)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
@@ -91,6 +91,21 @@ struct ContentView: View {
                 .fill(Color.red)
                 .frame(width: 80, height: 80)
         }
+    }
+
+    private func loadLogoImage() -> UIImage? {
+        // 1) Asset catalog or bundle root
+        if let img = UIImage(named: "logo") { return img }
+        // 2) Direct file path
+        if let path = Bundle.main.path(forResource: "logo", ofType: "png"),
+           let img = UIImage(contentsOfFile: path) { return img }
+        // 3) URL with Data
+        if let url = Bundle.main.url(forResource: "logo", withExtension: "png"),
+           let data = try? Data(contentsOf: url),
+           let img = UIImage(data: data) { return img }
+        // 4) App icon fallback
+        if let img = UIImage(named: "AppIcon60x60") { return img }
+        return nil
     }
 
     // MARK: - Welcome screen

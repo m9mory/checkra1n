@@ -94,6 +94,14 @@ jobs:
           fi
           echo "✔ Found: $APP_PATH"
 
+          # DEBUG: verify logo.png is in the bundle
+          echo ''
+          echo '==> Verifying bundle contents:'
+          find "$APP_PATH" -name "*.png" -o -name "logo*" | while read -r f; do
+            echo "     $f ($(stat -f%z "$f" 2>/dev/null || echo '?'))"
+          done
+          echo ''
+
           # Pseudo-sign binary with ldid (if available)
           if command -v ldid >/dev/null 2>&1 && [ "${{ github.event.inputs.signing }}" != "unsigned" ]; then
             echo "→ Pseudo-signing with ldid…"
