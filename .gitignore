@@ -10,7 +10,6 @@ checkra1n.xcodeproj/
 
 # Generated icons (recreated by script)
 Resources/Assets.xcassets/AppIcon.appiconset/icon-*.png
-Resources/Assets.xcassets/Logo.imageset/logo.png
 
 # macOS
 .DS_Store
