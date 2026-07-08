@@ -78,11 +78,10 @@ struct ContentView: View {
         }
     }
 
-    /// Logo: user icon loaded from bundle, red circle if missing
+    /// Logo: user icon from bundle, loaded via UIImage(named:)
     @ViewBuilder
     private var logoView: some View {
-        if let path = Bundle.main.path(forResource: "logo", ofType: "png"),
-           let img = UIImage(contentsOfFile: path) {
+        if let img = UIImage(named: "logo") {
             Image(uiImage: img)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
