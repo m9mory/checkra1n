@@ -78,23 +78,12 @@ struct ContentView: View {
         }
     }
 
-    /// Logo: user icon layered over fallback circle+checkmark
+    /// Logo: user icon from asset catalog
     private var logoView: some View {
-        ZStack {
-            // Fallback below (shows through if icon missing/broken)
-            Circle()
-                .stroke(Color.white, lineWidth: 2.5)
-                .frame(width: 80, height: 80)
-            Image(systemName: "checkmark")
-                .font(.system(size: 38, weight: .bold))
-                .foregroundColor(.white)
-
-            // User icon on top (covers fallback when loaded)
-            Image("Logo")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 80, height: 80)
-        }
+        Image("Logo")
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 80, height: 80)
     }
 
     // MARK: - Welcome screen
