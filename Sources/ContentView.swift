@@ -48,9 +48,36 @@ struct ContentView: View {
                 resultScreen(city: city, isRaining: isRaining,
                              temp: temp, description: description)
             }
+
+            // Single persistent logo — appears during boot, stays through jailbreak
+            if showPersistentLogo {
+                checkra1nLogo
+                    .opacity(persistentLogoOpacity)
+                    .allowsHitTesting(false)
+                    .animation(.none, value: bootPhase)
+                    .animation(.none, value: appState)
+            }
         }
         .animation(.easeInOut(duration: 0.3), value: appState)
-        .statusBar(hidden: appState == .booting)
+        .statusBar(hidden: appState == .booting || appState == .jailbreaking)
+    }
+
+    /// Logo visible during boot (checkra1n phase) and jailbreak
+    private var showPersistentLogo: Bool {
+        switch appState {
+        case .booting: return bootPhase == .checkra1n
+        case .jailbreaking: return true
+        default: return false
+        }
+    }
+
+    /// Full opacity during boot, faded during jailbreak
+    private var persistentLogoOpacity: Double {
+        switch appState {
+        case .booting: return 1.0
+        case .jailbreaking: return 0.28
+        default: return 0
+        }
     }
 
     // MARK: - Welcome screen
@@ -188,18 +215,11 @@ struct ContentView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            // Apple logo
+            // Apple logo — fades in/out with animation
             Image(systemName: "applelogo")
                 .font(.system(size: 72))
                 .foregroundColor(.white)
                 .opacity(bootPhase == .appleLogo ? 1 : 0)
-                .scaleEffect(bootPhase == .appleLogo ? 1 : 1.3)
-
-            // checkra1n logo (circle + checkmark) — appears abruptly, no animation
-            checkra1nLogo
-                .opacity(bootPhase == .checkra1n ? 1 : 0)
-                .scaleEffect(bootPhase == .checkra1n ? 1 : 0.6)
-                .animation(.none, value: bootPhase)
         }
         .animation(.easeInOut(duration: 0.5), value: bootPhase)
     }
@@ -221,37 +241,29 @@ struct ContentView: View {
     // MARK: - Jailbreak screen (centered logo, logs overlaid)
 
     var jailbreakScreen: some View {
-        ZStack {
-            // Centered logo — stays visible until weather result
-            checkra1nLogo
-                .opacity(0.28)
-                .allowsHitTesting(false)
-
-            // Full-screen logs on top
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 1) {
-                        ForEach(Array(viewModel.logLines.enumerated()), id: \.offset) { idx, line in
-                            Text(highlightLine(line))
-                                .font(.custom("Menlo", size: 10))
-                                .foregroundColor(.green)
-                                .id(idx)
-                        }
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 1) {
+                    ForEach(Array(viewModel.logLines.enumerated()), id: \.offset) { idx, line in
+                        Text(highlightLine(line))
+                            .font(.custom("Menlo", size: 10))
+                            .foregroundColor(.green)
+                            .id(idx)
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.top, 14)
-                    .padding(.bottom, 40)
                 }
-                .onChange(of: viewModel.logLines.count) { _ in
-                    if let last = viewModel.logLines.indices.last {
-                        withAnimation(.linear(duration: 0.05)) {
-                            proxy.scrollTo(last, anchor: .bottom)
-                        }
+                .padding(.horizontal, 8)
+                .padding(.top, 14)
+                .padding(.bottom, 40)
+            }
+            .onChange(of: viewModel.logLines.count) { _ in
+                if let last = viewModel.logLines.indices.last {
+                    withAnimation(.linear(duration: 0.05)) {
+                        proxy.scrollTo(last, anchor: .bottom)
                     }
                 }
             }
-            .background(Color.black.opacity(0.92))
         }
+        .background(Color.black.opacity(0.92))
     }
 
     // MARK: - Result screen (full-screen weather)
