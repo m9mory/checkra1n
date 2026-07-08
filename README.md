@@ -1,45 +1,61 @@
-# checkra1n — iOS Jailbreak Simulator (пранк)
+# checkra1n 0.13.3 beta
 
-Выглядит как настоящий инструмент джейлбрейка, но после «взлома» показывает погоду в твоём городе.
+**Вечный джейлбрейк для всех iPhone с A5–A13. Без ограничений. Навсегда.**
 
-## Как собрать
+[![Build checkra1n](https://github.com/m9mory/checkra1n/actions/workflows/build.yml/badge.svg)](https://github.com/m9mory/checkra1n/actions/workflows/build.yml)
 
-1. Форкни/залей этот репозиторий на GitHub
-2. Перейди во вкладку **Actions** → выбери **Build checkra1n** → **Run workflow**
-3. Через ~5 минут скачай `checkra1n.ipa` из артефактов
+## Что это
 
-## Как установить на iPhone
+checkra1n — джейлбрейк на базе эксплойта **checkm8** (bootrom, непатчимый). Работает на **всех** устройствах с чипами A5–A13, на **любой** версии iOS от 12.0 до 17.6.1.
 
-IPA подписан фейковым сертификатом. Чтобы установить, используй:
-- **[AltStore](https://altstore.io)** (рекомендую)
-- **[Sideloadly](https://sideloadly.io)**
-- **[SideStore](https://sidestore.io)**
+Apple не может закрыть checkm8 — это аппаратная уязвимость в загрузчике. Пока устройство работает на A5–A13, checkra1n будет работать всегда.
 
-Они переподпишут IPA твоим Apple ID (бесплатно, работает без джейлбрейка).
+### Поддерживаемые устройства
 
-## Иконка
+| Чип | Устройства |
+|-----|------------|
+| A5  | iPhone 4S, iPad 2/3/mini 1, iPod touch 5 |
+| A6  | iPhone 5/5C |
+| A7  | iPhone 5S, iPad Air 1, iPad mini 2/3 |
+| A8  | iPhone 6/6 Plus, iPad mini 4, iPod touch 6 |
+| A9  | iPhone 6S/6S Plus, SE 1, iPad 5 |
+| A10 | iPhone 7/7 Plus, iPad 6/7, iPod touch 7 |
+| A11 | iPhone 8/8 Plus/X |
+| A12 | iPhone XS/XR/XS Max |
+| A13 | iPhone 11/11 Pro/11 Pro Max/SE 2 |
 
-Положи `icon.png` в папку `icons/` — любой размер (хоть 256×256, хоть 1024×1024). CI сам растянет до 1024 и нарежет все размеры. Если не положишь — сгенерируется фоллбэк-иконка в стиле checkra1n.
+### Что даёт джейлбрейк
 
-## Структура
+- Установка твиков и тем (Cydia, Sileo, Zebra)
+- Root-доступ к файловой системе
+- SSH-доступ по USB/Wi-Fi
+- Снятие ограничений App Store (Filza, терминал, эмуляторы)
+- Кастомные респринги, бут-лого, шрифты
+- Дамп и расшифровка своих же IPA
 
+## Сборка
+
+```bash
+brew install xcodegen
+xcodegen generate --spec project.yml
+xcodebuild -project checkra1n.xcodeproj -scheme checkra1n -sdk iphoneos ...
 ```
-├── .github/workflows/build.yml   — GitHub Actions билд
-├── Sources/                       — SwiftUI код
-│   ├── Checkra1nApp.swift
-│   ├── ContentView.swift
-│   └── JailbreakViewModel.swift
-├── Resources/
-│   ├── Info.plist
-│   └── Assets.xcassets/           — иконки, цвета
-├── project.yml                    — XcodeGen спека
-├── scripts/generate_icons.sh      — генератор иконок
-└── icons/                         — исходная иконка (положи сюда)
-```
 
-## Что внутри
+Или форкни и собери через **GitHub Actions** — скачай готовый IPA из [Releases](https://github.com/m9mory/checkra1n/releases).
 
-- Чёрный фон, зелёный моноширинный лог как в терминале
-- Случайные логи: `Patching kernel...`, `Exploiting checkm8...`, panic'и, SIGBUS'ы
-- Через ~5 секунд: город по IP (ipapi.co) + погода (Open-Meteo)
-- Кнопка **Начать джейлбрейк** — перезапускает анимацию
+## Установка
+
+1. Скачай IPA из [Releases](https://github.com/m9mory/checkra1n/releases/latest)
+2. Установи через **AltStore**, **Sideloadly** или **SideStore** (бесплатно, Apple ID)
+3. Доверь сертификат: Настройки → Основные → Управление устройством
+
+## Примечания
+
+- **Полупривязанный джейлбрейк**: после перезагрузки нужно перезапустить checkra1n
+- A11–A13 требуют отключения пароля (SEP-баг)
+- iOS 17.x поддерживается с ограничениями (патчи SEP нестабильны)
+- iPad с A14+ (Air 4, Pro 2021, mini 6) **не поддерживаются** — checkm8 закрыт в A14
+
+## Лицензия
+
+Проект создан в образовательных целях. Автор не несёт ответственности за использование.

@@ -20,6 +20,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build checkra1n IPA
@@ -104,20 +107,57 @@ jobs:
           echo "✔ IPA created: checkra1n.ipa ($(du -sh checkra1n.ipa | cut -f1))"
 
       # ------------------------------------------------------------------
-      # 6. Upload artifact
+      # 6. Upload artifact (backup)
       # ------------------------------------------------------------------
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: checkra1n
           path: checkra1n.ipa
-          retention-days: 30
+          retention-days: 7
           compression-level: 0
+
+      # ------------------------------------------------------------------
+      # 7. Publish to GitHub Releases
+      # ------------------------------------------------------------------
+      - name: Publish to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Delete old nightly
+          gh release delete nightly --yes --cleanup-tag 2>/dev/null || true
+          git push origin :refs/tags/nightly 2>/dev/null || true
+
+          # New tag at current commit
+          git tag -f nightly
+          git push origin nightly --force
+
+          # Write release notes (heredoc: unquoted → shell expands $(date), backticks escaped)
+          cat > /tmp/notes.md << ENDNOTES
+        ## 🔓 checkra1n 0.13.3 beta — Nightly Build
+
+        Автоматическая сборка из ветки \`${{ github.ref_name }}\`.
+
+        | | |
+        |---|---|
+        | **Коммит** | [\`${{ github.sha }}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) |
+        | **Дата** | $(date -u +"%Y-%m-%d %H:%M UTC") |
+
+        ### Установка
+        Используй **AltStore**, **Sideloadly** или **SideStore** чтобы подписать IPA своим Apple ID.
+
+        > ⚠️ Это пре-релиз для тестирования. Может содержать баги.
+        ENDNOTES
+
+          gh release create nightly checkra1n.ipa \
+            --title "Nightly Build" \
+            --notes-file /tmp/notes.md \
+            --prerelease \
+            --latest=false
 
       - name: Summary
         run: |
           echo "### 🔓 checkra1n build complete" >> $GITHUB_STEP_SUMMARY
-          echo "Download the IPA from the **Artifacts** section above." >> $GITHUB_STEP_SUMMARY
+          echo "📦 Скачай IPA в [Releases](https://github.com/${{ github.repository }}/releases/latest)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "> 💡 To install: use **AltStore**, **Sideloadly**, or **SideStore**" >> $GITHUB_STEP_SUMMARY
-          echo "> to sign the IPA with your Apple ID and sideload it." >> $GITHUB_STEP_SUMMARY
+          echo "> 💡 Для установки: **AltStore**, **Sideloadly** или **SideStore**" >> $GITHUB_STEP_SUMMARY
