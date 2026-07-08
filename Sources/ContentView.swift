@@ -8,10 +8,19 @@ enum PackageManager: String, CaseIterable {
     case zebra  = "Zebra"
 }
 
+// MARK: - Boot phases
+
+enum BootPhase {
+    case blackout     // 0–3 s: pure black
+    case appleLogo    // 3–4 s: Apple logo fades in
+    case checkra1n    // 4–5 s: checkra1n logo replaces Apple
+}
+
 // MARK: - App states
 
 enum AppState: Equatable {
     case welcome
+    case booting
     case jailbreaking
     case result(city: String, isRaining: Bool, temp: Double, description: String)
 }
@@ -22,6 +31,7 @@ struct ContentView: View {
     @StateObject private var viewModel = JailbreakViewModel()
     @State private var appState: AppState = .welcome
     @State private var selectedPM: PackageManager = .sileo
+    @State private var bootPhase: BootPhase = .blackout
 
     var body: some View {
         ZStack {
@@ -30,6 +40,8 @@ struct ContentView: View {
             switch appState {
             case .welcome:
                 welcomeScreen
+            case .booting:
+                bootScreen
             case .jailbreaking:
                 jailbreakScreen
             case let .result(city, isRaining, temp, description):
@@ -46,7 +58,6 @@ struct ContentView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            // Logo — circle with checkmark (checkra1n style)
             ZStack {
                 Circle()
                     .stroke(Color.green, lineWidth: 3)
@@ -76,7 +87,6 @@ struct ContentView: View {
             .foregroundColor(.green.opacity(0.35))
             .padding(.top, 16)
 
-            // Package manager picker
             VStack(spacing: 6) {
                 Text("Менеджер пакетов")
                     .font(.custom("Menlo", size: 11))
@@ -92,16 +102,7 @@ struct ContentView: View {
 
             Spacer()
 
-            // Start button
-            Button(action: {
-                appState = .jailbreaking
-                viewModel.startJailbreak(packageManager: selectedPM) { city, isRaining, temp, desc in
-                    withAnimation(.easeInOut(duration: 0.6)) {
-                        appState = .result(city: city, isRaining: isRaining,
-                                           temp: temp, description: desc)
-                    }
-                }
-            }) {
+            Button(action: { startBootSequence() }) {
                 Text("Начать джейлбрейк")
                     .font(.custom("Menlo", size: 17))
                     .foregroundColor(.black)
@@ -151,30 +152,108 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Jailbreak screen (logs)
+    // MARK: - Boot sequence
+
+    func startBootSequence() {
+        appState = .booting
+        bootPhase = .blackout
+
+        // Phase 1→2: blackout → Apple logo (after 3 s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            guard appState == .booting else { return }
+            withAnimation(.easeIn(duration: 0.4)) { bootPhase = .appleLogo }
+        }
+
+        // Phase 2→3: Apple → checkra1n logo (after 4 s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+            guard appState == .booting else { return }
+            withAnimation(.easeInOut(duration: 0.5)) { bootPhase = .checkra1n }
+        }
+
+        // Phase 3→jailbreak: start logs (after 5.5 s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.5) {
+            guard appState == .booting else { return }
+            withAnimation(.easeInOut(duration: 0.3)) { appState = .jailbreaking }
+            viewModel.startJailbreak(packageManager: selectedPM) { city, isRaining, temp, desc in
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    appState = .result(city: city, isRaining: isRaining,
+                                       temp: temp, description: desc)
+                }
+            }
+        }
+    }
+
+    var bootScreen: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            // Apple logo
+            Image(systemName: "applelogo")
+                .font(.system(size: 72))
+                .foregroundColor(.white)
+                .opacity(bootPhase == .appleLogo ? 1 : 0)
+                .scaleEffect(bootPhase == .appleLogo ? 1 : 1.3)
+
+            // checkra1n logo (circle + checkmark)
+            checkra1nLogo
+                .opacity(bootPhase == .checkra1n ? 1 : 0)
+                .scaleEffect(bootPhase == .checkra1n ? 1 : 0.6)
+        }
+        .animation(.easeInOut(duration: 0.5), value: bootPhase)
+    }
+
+    // MARK: - checkra1n logo (reusable)
+
+    var checkra1nLogo: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white, lineWidth: 2.5)
+                .frame(width: 80, height: 80)
+
+            Image(systemName: "checkmark")
+                .font(.system(size: 38, weight: .bold))
+                .foregroundColor(.white)
+        }
+    }
+
+    // MARK: - Jailbreak screen (logo + logs)
 
     var jailbreakScreen: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 1) {
-                    ForEach(Array(viewModel.logLines.enumerated()), id: \.offset) { idx, line in
-                        Text(highlightLine(line))
-                            .font(.custom("Menlo", size: 10))
-                            .foregroundColor(.green)
-                            .id(idx)
+        HStack(spacing: 0) {
+            // Logs — left side
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 1) {
+                        ForEach(Array(viewModel.logLines.enumerated()), id: \.offset) { idx, line in
+                            Text(highlightLine(line))
+                                .font(.custom("Menlo", size: 9))
+                                .foregroundColor(.green)
+                                .id(idx)
+                        }
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 14)
+                }
+                .onChange(of: viewModel.logLines.count) { _ in
+                    if let last = viewModel.logLines.indices.last {
+                        withAnimation(.linear(duration: 0.05)) {
+                            proxy.scrollTo(last, anchor: .bottom)
+                        }
                     }
                 }
-                .padding(.horizontal, 6)
-                .padding(.top, 14)
-                .padding(.bottom, 40)
             }
-            .onChange(of: viewModel.logLines.count) { _ in
-                if let last = viewModel.logLines.indices.last {
-                    withAnimation(.linear(duration: 0.05)) {
-                        proxy.scrollTo(last, anchor: .bottom)
-                    }
-                }
+            .frame(maxWidth: .infinity)
+
+            // Logo — right side, pinned
+            VStack {
+                Spacer()
+                checkra1nLogo
+                    .opacity(0.7)
+                    .padding(.trailing, 12)
+                Spacer()
             }
+            .frame(width: 110)
+            .background(Color.black)
         }
     }
 
@@ -222,7 +301,7 @@ struct ContentView: View {
         for marker in ["[*]", "[✓]", "[!]", "[+]", "[-]", "[?]"] {
             if let range = attr.range(of: marker) {
                 attr[range].foregroundColor = .white
-                attr[range].font = .custom("Menlo", size: 10).bold()
+                attr[range].font = .custom("Menlo", size: 9).bold()
             }
         }
         return attr
