@@ -22,8 +22,9 @@ targets:
       - path: Sources
         type: group
     resources:
-      - path: Resources
+      - path: Resources/Assets.xcassets
         type: group
+      - path: Resources/Info.plist
     settings:
       base:
         INFOPLIST_FILE: Resources/Info.plist

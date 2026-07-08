@@ -1,5 +1,13 @@
 import SwiftUI
 
+// MARK: - Package manager
+
+enum PackageManager: String, CaseIterable {
+    case sileo  = "Sileo"
+    case cydia  = "Cydia"
+    case zebra  = "Zebra"
+}
+
 // MARK: - App states
 
 enum AppState: Equatable {
@@ -13,6 +21,7 @@ enum AppState: Equatable {
 struct ContentView: View {
     @StateObject private var viewModel = JailbreakViewModel()
     @State private var appState: AppState = .welcome
+    @State private var selectedPM: PackageManager = .sileo
 
     var body: some View {
         ZStack {
@@ -67,12 +76,26 @@ struct ContentView: View {
             .foregroundColor(.green.opacity(0.35))
             .padding(.top, 16)
 
+            // Package manager picker
+            VStack(spacing: 6) {
+                Text("Менеджер пакетов")
+                    .font(.custom("Menlo", size: 11))
+                    .foregroundColor(.green.opacity(0.45))
+
+                HStack(spacing: 20) {
+                    ForEach(PackageManager.allCases, id: \.self) { pm in
+                        pmButton(pm)
+                    }
+                }
+            }
+            .padding(.top, 24)
+
             Spacer()
 
             // Start button
             Button(action: {
                 appState = .jailbreaking
-                viewModel.startJailbreak { city, isRaining, temp, desc in
+                viewModel.startJailbreak(packageManager: selectedPM) { city, isRaining, temp, desc in
                     withAnimation(.easeInOut(duration: 0.6)) {
                         appState = .result(city: city, isRaining: isRaining,
                                            temp: temp, description: desc)
@@ -90,6 +113,41 @@ struct ContentView: View {
                     )
             }
             .padding(.bottom, 70)
+        }
+    }
+
+    // MARK: - PM button
+
+    func pmButton(_ pm: PackageManager) -> some View {
+        let isSelected = selectedPM == pm
+        let (symbol, color): (String, Color) = {
+            switch pm {
+            case .sileo: return ("app.badge.fill", Color(red: 0.2, g: 0.75, b: 0.85))
+            case .cydia: return ("shippingbox.fill", Color(red: 0.7, g: 0.4, b: 0.2))
+            case .zebra: return ("square.grid.3x3.fill", Color(red: 0.55, g: 0.55, b: 0.55))
+            }
+        }()
+
+        return Button(action: { selectedPM = pm }) {
+            VStack(spacing: 6) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(isSelected ? color.opacity(0.25) : Color.white.opacity(0.06))
+                        .frame(width: 60, height: 60)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(isSelected ? color : Color.white.opacity(0.15), lineWidth: isSelected ? 2 : 1)
+                        )
+
+                    Image(systemName: symbol)
+                        .font(.system(size: 24))
+                        .foregroundColor(isSelected ? color : .gray)
+                }
+
+                Text(pm.rawValue)
+                    .font(.custom("Menlo", size: 10))
+                    .foregroundColor(isSelected ? color : .gray)
+            }
         }
     }
 
@@ -127,13 +185,11 @@ struct ContentView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            // City name
             Text(city)
                 .font(.custom("Menlo", size: 28))
                 .foregroundColor(.white.opacity(0.7))
                 .padding(.bottom, 16)
 
-            // Big rain status
             Text(isRaining ? "ДОЖДЬ\nИДЁТ" : "ДОЖДЯ\nНЕТ")
                 .font(.custom("Menlo", size: isRaining ? 46 : 50))
                 .fontWeight(.bold)
@@ -141,7 +197,6 @@ struct ContentView: View {
                 .multilineTextAlignment(.center)
                 .padding(.bottom, 20)
 
-            // Temperature & description
             HStack(spacing: 12) {
                 Text(description)
                 Text("·")
@@ -152,7 +207,6 @@ struct ContentView: View {
 
             Spacer()
 
-            // Subtle footer
             Text("checkra1n 0.13.3 beta")
                 .font(.custom("Menlo", size: 10))
                 .foregroundColor(.green.opacity(0.3))

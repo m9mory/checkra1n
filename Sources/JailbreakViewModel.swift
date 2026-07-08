@@ -7,8 +7,11 @@ final class JailbreakViewModel: ObservableObject {
 
     // MARK: - Public
 
-    func startJailbreak(onComplete: @escaping (_ city: String, _ isRaining: Bool,
-                                               _ temp: Double, _ desc: String) -> Void) {
+    func startJailbreak(
+        packageManager pm: PackageManager,
+        onComplete: @escaping (_ city: String, _ isRaining: Bool,
+                               _ temp: Double, _ desc: String) -> Void
+    ) {
         cancelAll()
         logLines.removeAll()
 
@@ -28,7 +31,7 @@ final class JailbreakViewModel: ObservableObject {
         let modules: [String] = [
             "PongoOS", "kernel_loader", "trustcache",
             "amfid_patch", "sandbox_patch", "rootfs",
-            "substitute", "libhooker", "Sileo", "dpkg",
+            "substitute", "libhooker", pm.rawValue, "dpkg",
             "jailbreakd", "pwn20wnd", "uikittools",
         ]
 
@@ -52,7 +55,7 @@ final class JailbreakViewModel: ObservableObject {
             "[*] Running ldrestart...",
             "[✓] Daemons reloaded",
             "[*] Injecting into SpringBoard...",
-            "[✓] Cydia & Sileo installed",
+            "[✓] \(pm.rawValue) installed successfully",
             "[✓] All patches applied successfully",
             "[✓] Jailbreak complete! 🏴‍☠️",
             "",
@@ -132,7 +135,7 @@ final class JailbreakViewModel: ObservableObject {
             "Virtual memory region: 0xfffffff008300000–0xfffffff0083fffff",
             "Restoring virtual memory map...",
             // Boot
-            "Setting nonce generator (A13)...",
+            "Setting nonce generator (A19)...",
             "APTicket verified successfully",
             "Boot nonce set: 0xdeadbeefcafebabe",
             "iBoot patchset #3 applied",
@@ -182,21 +185,15 @@ final class JailbreakViewModel: ObservableObject {
                                _ temp: Double, _ desc: String) -> Void
     ) {
         Task {
+            let (city, lat, lon) = await fetchLocation()
+
+            guard let lat, let lon else {
+                await done(onComplete, city: city,
+                           raining: false, temp: 0, desc: "Нет данных")
+                return
+            }
+
             do {
-                // 1) IP → location
-                let ipURL = URL(string: "https://ipapi.co/json/")!
-                let (ipData, _) = try await URLSession.shared.data(from: ipURL)
-
-                guard let ipJson = try JSONSerialization.jsonObject(with: ipData) as? [String: Any],
-                      let city = ipJson["city"] as? String,
-                      let lat = ipJson["latitude"] as? Double,
-                      let lon = ipJson["longitude"] as? Double else {
-                    await done(onComplete, city: "Неизвестно",
-                               raining: false, temp: 0, desc: "Нет данных")
-                    return
-                }
-
-                // 2) Weather
                 let meteoURL = URL(string:
                     "https://api.open-meteo.com/v1/forecast?latitude=\(lat)&longitude=\(lon)&current_weather=true")!
                 let (meteoData, _) = try await URLSession.shared.data(from: meteoURL)
@@ -216,9 +213,48 @@ final class JailbreakViewModel: ObservableObject {
                 await done(onComplete, city: city,
                            raining: isRaining, temp: temp, desc: desc)
             } catch {
-                await done(onComplete, city: "Ошибка",
+                await done(onComplete, city: city,
                            raining: false, temp: 0, desc: error.localizedDescription)
             }
+        }
+    }
+
+    /// Try multiple IP-geolocation APIs; Russia-friendly chain.
+    private func fetchLocation() async -> (city: String, lat: Double?, lon: Double?) {
+        // 1) ip-api.com — free, no key, works in Russia
+        if let loc = await tryLocation(
+            url: "http://ip-api.com/json/?fields=city,lat,lon",
+            cityKey: "city", latKey: "lat", lonKey: "lon"
+        ) { return loc }
+
+        // 2) ipwho.is — fallback
+        if let loc = await tryLocation(
+            url: "https://ipwho.is/json",
+            cityKey: "city", latKey: "latitude", lonKey: "longitude"
+        ) { return loc }
+
+        // 3) freeipapi.com — second fallback
+        if let loc = await tryLocation(
+            url: "https://freeipapi.com/api/json",
+            cityKey: "cityName", latKey: "latitude", lonKey: "longitude"
+        ) { return loc }
+
+        // All failed — default
+        return ("Неизвестно", nil, nil)
+    }
+
+    private func tryLocation(url: String, cityKey: String,
+                              latKey: String, lonKey: String) async -> (String, Double?, Double?)? {
+        guard let u = URL(string: url) else { return nil }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: u)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let city = json[cityKey] as? String else { return nil }
+            let lat = json[latKey] as? Double
+            let lon = json[lonKey] as? Double
+            return (city, lat, lon)
+        } catch {
+            return nil
         }
     }
 
