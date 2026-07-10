@@ -60,7 +60,7 @@ final class JailbreakViewModel: ObservableObject {
             "[*] Injecting into SpringBoard...",
             "[✓] \(pm.rawValue) installed successfully",
             "[✓] All patches applied successfully",
-            "[✓] Jailbreak complete! 🏴‍☠️",
+            "[✓] Jailbreak complete!",
         ]
 
         var delay: Double = 0

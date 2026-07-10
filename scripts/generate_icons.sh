@@ -119,6 +119,49 @@ print(f'  ✓ Fallback icon written → $out')
 echo '==> Generating app icons…'
 mkdir -p "$OUT_DIR"
 
+# ---------- composite onto black background (for app icon) ----------
+black_bg_icon() {
+    local in="$1" out="$2"
+    python3 -c "
+import struct, zlib
+
+with open('$in', 'rb') as f:
+    png = f.read()
+assert png[:8] == b'\\x89PNG\\r\\n\\x1a\\n'
+pos = 8; width = height = 0; idat = b''
+while pos < len(png):
+    L = struct.unpack('>I', png[pos:pos+4])[0]
+    t = png[pos+4:pos+8]; pos += 8
+    if t == b'IHDR':
+        width = struct.unpack('>I', png[pos:pos+4])[0]
+        height = struct.unpack('>I', png[pos+4:pos+8])[0]
+        assert png[pos+8] == 8 and png[pos+9] == 6, 'need RGBA'
+    elif t == b'IDAT': idat += png[pos:pos+L]
+    elif t == b'IEND': break
+    pos += L + 4
+
+raw = bytearray(zlib.decompress(idat))
+s = width * 4 + 1
+for y in range(height):
+    off = y * s + 1
+    for x in range(width):
+        o = off + x*4
+        if raw[o+3] < 255:  # any transparency → black
+            raw[o], raw[o+1], raw[o+2], raw[o+3] = 0, 0, 0, 255
+
+def pk(t, d):
+    c = t + d
+    return struct.pack('>I', len(d)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+
+with open('$out', 'wb') as f:
+    f.write(b'\\x89PNG\\r\\n\\x1a\\n')
+    f.write(pk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)))
+    f.write(pk(b'IDAT', zlib.compress(bytes(raw))))
+    f.write(pk(b'IEND', b''))
+print('  ✓ Black bg composited')
+"
+}
+
 # Determine source: user-provided icon.png or fallback
 BASE_1024="$OUT_DIR/icon-1024@1x.png"
 
@@ -126,7 +169,10 @@ if [ -f "$SRC_ICON" ]; then
     src_w=$(sips -g pixelWidth  "$SRC_ICON" 2>/dev/null | awk '/pixelWidth/ {print $2}')
     src_h=$(sips -g pixelHeight "$SRC_ICON" 2>/dev/null | awk '/pixelHeight/ {print $2}')
     echo "  → Using user-provided icon: $SRC_ICON (${src_w}×${src_h})"
-    resize "$SRC_ICON" "$BASE_1024" 1024
+    # Composite onto black for app icon
+    ICON_BLACK="${SRC_ICON%.png}-black.png"
+    black_bg_icon "$SRC_ICON" "$ICON_BLACK"
+    resize "$ICON_BLACK" "$BASE_1024" 1024
 else
     echo "  → No $SRC_ICON found — generating fallback"
     generate_fallback "$BASE_1024" 1024
@@ -182,8 +228,9 @@ LOGO_DIR="$SRCROOT/Resources/Assets.xcassets/Logo.imageset"
 LOGO_DST="$LOGO_DIR/logo.png"
 mkdir -p "$LOGO_DIR"
 if [ -f "$SRC_ICON" ]; then
+    # In-app logo keeps transparency (original file)
     cp "$SRC_ICON" "$LOGO_DST"
-    echo "  → Copied user icon → Logo.imageset/logo.png"
+    echo "  → Copied transparent icon → Logo.imageset/logo.png"
 else
     cp "$BASE_1024" "$LOGO_DST"
     echo "  → Copied fallback icon → Logo.imageset/logo.png"
