@@ -192,4 +192,18 @@ fi
 # Also copy to Resources/ for bundle loading
 cp "$LOGO_DST" "$SRCROOT/Resources/logo.png"
 
+# ---------- copy package manager icons ----------
+echo ''
+echo '==> Copying package manager icons…'
+for pm in sileo cydia zebra; do
+    PM_SRC="$SRCROOT/icons/$pm.png"
+    PM_DST="$SRCROOT/Resources/$pm.png"
+    if [ -f "$PM_SRC" ]; then
+        cp "$PM_SRC" "$PM_DST"
+        echo "  → $pm.png → Resources/"
+    else
+        echo "  → $pm.png not found — skipping (will use fallback)"
+    fi
+done
+
 echo '==> Icons generated successfully!'

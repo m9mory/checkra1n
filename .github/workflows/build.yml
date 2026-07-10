@@ -111,11 +111,13 @@ jobs:
             echo "⚠ actool not found"
           fi
 
-          # Manually copy logo.png into app bundle
-          if [ -f Resources/logo.png ]; then
-            cp Resources/logo.png "$APP_PATH/logo.png"
-            echo "✔ logo.png → bundle"
-          fi
+          # Manually copy resource files into app bundle
+          for res in logo sileo cydia zebra; do
+            if [ -f "Resources/$res.png" ]; then
+              cp "Resources/$res.png" "$APP_PATH/$res.png"
+              echo "✔ $res.png → bundle"
+            fi
+          done
 
           # Verify final bundle
           echo ''

@@ -131,32 +131,42 @@ struct ContentView: View {
 
     func pmButton(_ pm: PackageManager) -> some View {
         let isSelected = selectedPM == pm
-        let (symbol, color): (String, Color) = {
+        let borderColor: Color = {
             switch pm {
-            case .sileo: return ("app.badge.fill", Color(red: 0.2, green: 0.75, blue: 0.85))
-            case .cydia: return ("shippingbox.fill", Color(red: 0.7, green: 0.4, blue: 0.2))
-            case .zebra: return ("square.grid.3x3.fill", Color(red: 0.55, green: 0.55, blue: 0.55))
+            case .sileo: return Color(red: 0.2, green: 0.75, blue: 0.85)
+            case .cydia: return Color(red: 0.7, green: 0.4, blue: 0.2)
+            case .zebra: return Color(red: 0.55, green: 0.55, blue: 0.55)
             }
         }()
+        let pmImage = UIImage(named: pm.rawValue.lowercased())
 
         return Button(action: { selectedPM = pm }) {
             VStack(spacing: 6) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 14)
-                        .fill(isSelected ? color.opacity(0.25) : Color.white.opacity(0.06))
+                        .fill(isSelected ? borderColor.opacity(0.25) : Color.white.opacity(0.06))
                         .frame(width: 60, height: 60)
                         .overlay(
                             RoundedRectangle(cornerRadius: 14)
-                                .stroke(isSelected ? color : Color.white.opacity(0.15),
+                                .stroke(isSelected ? borderColor : Color.white.opacity(0.15),
                                         lineWidth: isSelected ? 2 : 1)
                         )
-                    Image(systemName: symbol)
-                        .font(.system(size: 24))
-                        .foregroundColor(isSelected ? color : .gray)
+
+                    if let img = pmImage {
+                        Image(uiImage: img)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 40, height: 40)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    } else {
+                        Image(systemName: "app.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(isSelected ? borderColor : .gray)
+                    }
                 }
                 Text(pm.rawValue)
                     .font(.custom("Menlo", size: 10))
-                    .foregroundColor(isSelected ? color : .gray)
+                    .foregroundColor(isSelected ? borderColor : .gray)
             }
         }
     }
@@ -214,27 +224,29 @@ struct ContentView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            // Centered logos — user logo ON TOP of apple logo
-            ZStack {
-                appleLogoView
-                if bootPhase == .bothLogos {
-                    logoView
-                        .frame(width: 100, height: 100)
-                        .transition(.identity)
-                }
+            // Apple logo — slightly higher
+            appleLogoView
+                .offset(y: -30)
+                .opacity(bootPhase == .appleLogo || bootPhase == .bothLogos ? 1 : 0)
+
+            // User logo — lower-left from apple center
+            if bootPhase == .bothLogos {
+                logoView
+                    .frame(width: 100, height: 100)
+                    .offset(x: -8, y: 40)
+                    .transition(.identity)
             }
-            .opacity(bootPhase == .appleLogo || bootPhase == .bothLogos ? 1 : 0)
         }
         .animation(.none, value: bootPhase)
     }
 
-    // MARK: - Jailbreak screen (logos centered, full-screen logs behind)
+    // MARK: - Jailbreak screen
 
     var jailbreakScreen: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            // Full-screen logs
+            // Full-screen logs — no padding, covers everything
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
@@ -245,8 +257,6 @@ struct ContentView: View {
                                 .id(idx)
                         }
                     }
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 4)
                 }
                 .onChange(of: viewModel.logLines.count) { _ in
                     if let last = viewModel.logLines.indices.last {
@@ -257,13 +267,14 @@ struct ContentView: View {
                 }
             }
 
-            // Centered logos ON TOP — user logo over apple logo
-            ZStack {
-                appleLogoView
-                logoView
-                    .frame(width: 100, height: 100)
-            }
-            .allowsHitTesting(false)
+            // Apple logo higher, user logo lower-left
+            appleLogoView
+                .offset(y: -30)
+                .allowsHitTesting(false)
+            logoView
+                .frame(width: 100, height: 100)
+                .offset(x: -8, y: 40)
+                .allowsHitTesting(false)
         }
     }
 

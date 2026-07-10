@@ -27,6 +27,16 @@ targets:
       - path: Resources/Info.plist
       - path: Resources/logo.png
         type: file
+        optional: true
+      - path: Resources/sileo.png
+        type: file
+        optional: true
+      - path: Resources/cydia.png
+        type: file
+        optional: true
+      - path: Resources/zebra.png
+        type: file
+        optional: true
     settings:
       base:
         INFOPLIST_FILE: Resources/Info.plist
