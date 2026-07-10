@@ -233,7 +233,8 @@ struct ContentView: View {
             if bootPhase == .bothLogos {
                 logoView
                     .frame(width: 100, height: 100)
-                    .offset(x: -6, y: 18)
+                    .background(Color.black)
+                    .offset(x: -14, y: 10)
                     .transition(.identity)
             }
         }
