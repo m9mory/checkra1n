@@ -128,38 +128,55 @@ import struct, zlib
 with open('$in', 'rb') as f:
     png = f.read()
 assert png[:8] == b'\\x89PNG\\r\\n\\x1a\\n'
-pos = 8; width = height = 0; coltype = 6; idat = b''
+pos = 8; width = height = bitd = coltype = 0
+palette = []; idat = b''
 while pos < len(png):
     L = struct.unpack('>I', png[pos:pos+4])[0]
     t = png[pos+4:pos+8]; pos += 8
+    d = png[pos:pos+L]; pos += L
     if t == b'IHDR':
-        width = struct.unpack('>I', png[pos:pos+4])[0]
-        height = struct.unpack('>I', png[pos+4:pos+8])[0]
-        coltype = png[pos+9]
-    elif t == b'IDAT': idat += png[pos:pos+L]
+        width = struct.unpack('>I', d[0:4])[0]
+        height = struct.unpack('>I', d[4:8])[0]
+        bitd, coltype = d[8], d[9]
+    elif t == b'PLTE':
+        for i in range(0, len(d), 3):
+            palette.append((d[i], d[i+1], d[i+2]))
+    elif t == b'IDAT': idat += d
     elif t == b'IEND': break
-    pos += L + 4
+    pos += 4
 
 raw = bytearray(zlib.decompress(idat))
-bpp = {2:3, 6:4}[coltype]  # RGB=3, RGBA=4
-s = width * bpp + 1
 pixels = []
+
+bpp = {0:1, 2:3, 3:1, 4:2, 6:4}[coltype]
+row_len = width * bpp + 1  # +1 for filter byte
 for y in range(height):
-    off = y * s + 1
+    row_start = y * row_len + 1  # skip filter byte
     for x in range(width):
-        o = off + x*bpp
-        r, g, b = raw[o], raw[o+1], raw[o+2]
-        a = raw[o+3] if bpp == 4 else 255
+        if coltype == 0:       # Grayscale
+            v = raw[row_start + x]; r = g = b = v; a = 255
+        elif coltype == 2:     # RGB
+            o = row_start + x*3; r, g, b = raw[o], raw[o+1], raw[o+2]; a = 255
+        elif coltype == 3:     # Indexed
+            idx = raw[row_start + x]
+            r, g, b = palette[idx] if idx < len(palette) else (0, 0, 0); a = 255
+        elif coltype == 4:     # Gray+Alpha
+            o = row_start + x*2; r = g = b = raw[o]; a = raw[o+1]
+        elif coltype == 6:     # RGBA
+            o = row_start + x*4; r, g, b, a = raw[o], raw[o+1], raw[o+2], raw[o+3]
+        else:
+            r = g = b = 0; a = 255
+        # Transparency → fill with black
+        if a < 255:
+            r, g, b, a = 0, 0, 0, 255
         pixels.append((r, g, b, a))
 
-# Output always RGBA
+# Output RGBA
 out_raw = b''
 for y in range(height):
-    out_raw += b'\\x00'  # filter byte
+    out_raw += b'\\x00'
     for x in range(width):
         r, g, b, a = pixels[y*width + x]
-        if a < 255:  # any transparency → black
-            r, g, b, a = 0, 0, 0, 255
         out_raw += bytes([r, g, b, a])
 
 def pk(t, d):
@@ -171,7 +188,7 @@ with open('$out', 'wb') as f:
     f.write(pk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)))
     f.write(pk(b'IDAT', zlib.compress(out_raw)))
     f.write(pk(b'IEND', b''))
-print('  ✓ Black bg composited')
+print('  ✓ Black bg composited (type ' + str(coltype) + ')')
 "
 }
 
