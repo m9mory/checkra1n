@@ -104,9 +104,15 @@ jobs:
               --platform iphoneos \
               --minimum-deployment-target 15.0 \
               --app-icon AppIcon \
-              --output-partial-info-plist /dev/null \
+              --output-partial-info-plist /tmp/icon.plist \
               --development-region ru
             echo "✔ Assets.car compiled"
+
+            # Merge icon info into app Info.plist
+            if [ -f /tmp/icon.plist ]; then
+              /usr/libexec/PlistBuddy -c "Merge /tmp/icon.plist" "$APP_PATH/Info.plist" 2>/dev/null || true
+              echo "✔ Icon metadata merged → Info.plist"
+            fi
           else
             echo "⚠ actool not found"
           fi

@@ -229,11 +229,11 @@ struct ContentView: View {
                 .offset(y: -30)
                 .opacity(bootPhase == .appleLogo || bootPhase == .bothLogos ? 1 : 0)
 
-            // User logo — lower-left from apple center
+            // User logo — offset from apple center
             if bootPhase == .bothLogos {
                 logoView
                     .frame(width: 100, height: 100)
-                    .offset(x: -8, y: 40)
+                    .offset(x: -6, y: 18)
                     .transition(.identity)
             }
         }
@@ -267,13 +267,13 @@ struct ContentView: View {
                 }
             }
 
-            // Apple logo higher, user logo lower-left
+            // Apple logo higher, user logo offset
             appleLogoView
                 .offset(y: -30)
                 .allowsHitTesting(false)
             logoView
                 .frame(width: 100, height: 100)
-                .offset(x: -8, y: 40)
+                .offset(x: -6, y: 18)
                 .allowsHitTesting(false)
         }
     }
