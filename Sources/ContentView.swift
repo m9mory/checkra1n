@@ -214,34 +214,34 @@ struct ContentView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            appleLogoView
-                .opacity(bootPhase == .appleLogo || bootPhase == .bothLogos ? 1 : 0)
-                .animation(.none, value: bootPhase)
-
-            if bootPhase == .bothLogos {
-                logoView
-                    .frame(width: 50, height: 50)
-                    .offset(y: -70)
-                    .transition(.identity)
+            // Centered logos — same position as jailbreak screen
+            VStack(spacing: 14) {
+                appleLogoView
+                if bootPhase == .bothLogos {
+                    logoView
+                        .frame(width: 80, height: 80)
+                        .transition(.identity)
+                }
             }
+            .opacity(bootPhase == .appleLogo || bootPhase == .bothLogos ? 1 : 0)
         }
         .animation(.none, value: bootPhase)
     }
 
-    // MARK: - Jailbreak screen (logos top, logs below)
+    // MARK: - Jailbreak screen (logos centered, logs at bottom)
 
     var jailbreakScreen: some View {
-        VStack(spacing: 0) {
-            // Logos at top — full opacity, both visible
-            HStack(spacing: 20) {
-                appleLogoView
-                    .frame(width: 45, height: 45)
-                logoView
-                    .frame(width: 45, height: 45)
-            }
-            .padding(.top, 8)
+        ZStack(alignment: .bottom) {
+            Color.black.ignoresSafeArea()
 
-            // Logs below
+            // Centered logos — same as boot, stay in place
+            VStack(spacing: 14) {
+                appleLogoView
+                logoView
+                    .frame(width: 80, height: 80)
+            }
+
+            // Logs at the bottom
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
@@ -253,8 +253,8 @@ struct ContentView: View {
                         }
                     }
                     .padding(.horizontal, 4)
-                    .padding(.vertical, 4)
                 }
+                .frame(height: 160)
                 .onChange(of: viewModel.logLines.count) { _ in
                     if let last = viewModel.logLines.indices.last {
                         withAnimation(.linear(duration: 0.02)) {
@@ -314,7 +314,7 @@ struct ContentView: View {
 
     var appleLogoView: some View {
         Image(systemName: "applelogo")
-            .font(.system(size: 72))
+            .font(.system(size: 90))
             .foregroundColor(.white)
     }
 
