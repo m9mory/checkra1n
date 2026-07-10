@@ -80,13 +80,13 @@ struct ContentView: View {
 
             Text("checkra1n")
                 .font(.custom("Menlo", size: 34))
-                .foregroundColor(.green)
+                .foregroundColor(.white)
                 .fontWeight(.bold)
                 .padding(.top, 20)
 
             Text("0.13.3 beta")
                 .font(.custom("Menlo", size: 13))
-                .foregroundColor(.green.opacity(0.55))
+                .foregroundColor(.white.opacity(0.55))
                 .padding(.top, 4)
 
             VStack(spacing: 2) {
@@ -94,13 +94,13 @@ struct ContentView: View {
                 Text("iPhone 4S – iPhone 17 Pro Max")
             }
             .font(.custom("Menlo", size: 11))
-            .foregroundColor(.green.opacity(0.35))
+            .foregroundColor(.white.opacity(0.35))
             .padding(.top, 16)
 
             VStack(spacing: 6) {
                 Text("Менеджер пакетов")
                     .font(.custom("Menlo", size: 11))
-                    .foregroundColor(.green.opacity(0.45))
+                    .foregroundColor(.white.opacity(0.45))
 
                 HStack(spacing: 20) {
                     ForEach(PackageManager.allCases, id: \.self) { pm in
@@ -120,7 +120,7 @@ struct ContentView: View {
                     .padding(.vertical, 15)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.green)
+                            .fill(Color.white)
                     )
             }
             .padding(.bottom, 70)
@@ -293,7 +293,7 @@ struct ContentView: View {
             Text(isRaining ? "ДОЖДЬ\nИДЁТ" : "ДОЖДЯ\nНЕТ")
                 .font(.custom("Menlo", size: isRaining ? 46 : 50))
                 .fontWeight(.bold)
-                .foregroundColor(isRaining ? .white : .green)
+                .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .padding(.bottom, 20)
             HStack(spacing: 12) {
@@ -306,7 +306,7 @@ struct ContentView: View {
             Spacer()
             Text("checkra1n 0.13.3 beta")
                 .font(.custom("Menlo", size: 10))
-                .foregroundColor(.green.opacity(0.3))
+                .foregroundColor(.white.opacity(0.3))
                 .padding(.bottom, 50)
         }
     }
