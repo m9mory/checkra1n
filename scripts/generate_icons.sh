@@ -119,6 +119,66 @@ print(f'  ✓ Fallback icon written → $out')
 echo '==> Generating app icons…'
 mkdir -p "$OUT_DIR"
 
+# ---------- strip black background (pure Python, no deps) ----------
+remove_black_bg() {
+    local in="$1" out="$2"
+    python3 -c "
+import struct, zlib
+
+with open('$in', 'rb') as f:
+    png = f.read()
+
+# Minimal PNG reader — grab RGBA pixels
+assert png[:8] == b'\\x89PNG\\r\\n\\x1a\\n', 'not a PNG'
+pos = 8
+width = height = 0
+idat_data = b''
+while pos < len(png):
+    length = struct.unpack('>I', png[pos:pos+4])[0]
+    ctype = png[pos+4:pos+8]
+    pos += 8
+    if ctype == b'IHDR':
+        width  = struct.unpack('>I', png[pos:pos+4])[0]
+        height = struct.unpack('>I', png[pos+4:pos+8])[0]
+        bitd = png[pos+8]
+        coltype = png[pos+9]
+        assert bitd == 8 and coltype == 6, 'need 8-bit RGBA PNG'
+    elif ctype == b'IDAT':
+        idat_data += png[pos:pos+length]
+    elif ctype == b'IEND':
+        break
+    pos += length + 4
+
+raw = zlib.decompress(idat_data)
+stride = width * 4 + 1  # +1 for filter byte
+pixels = bytearray(raw)
+
+for y in range(height):
+    row_start = y * stride + 1  # skip filter byte
+    for x in range(width):
+        off = row_start + x * 4
+        r, g, b, a = pixels[off], pixels[off+1], pixels[off+2], pixels[off+3]
+        # Near-black → transparent
+        if r < 35 and g < 35 and b < 35:
+            pixels[off], pixels[off+1], pixels[off+2], pixels[off+3] = 0, 0, 0, 0
+
+# Recompress
+compressed = zlib.compress(bytes(pixels))
+
+# Write new PNG
+def png_pack(ctype, data):
+    c = ctype + data
+    return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+
+with open('$out', 'wb') as f:
+    f.write(b'\\x89PNG\\r\\n\\x1a\\n')
+    f.write(png_pack(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)))
+    f.write(png_pack(b'IDAT', compressed))
+    f.write(png_pack(b'IEND', b''))
+print(f'  ✓ Black background removed → $out')
+"
+}
+
 # Determine source: user-provided icon.png or fallback
 BASE_1024="$OUT_DIR/icon-1024@1x.png"
 
@@ -126,7 +186,10 @@ if [ -f "$SRC_ICON" ]; then
     src_w=$(sips -g pixelWidth  "$SRC_ICON" 2>/dev/null | awk '/pixelWidth/ {print $2}')
     src_h=$(sips -g pixelHeight "$SRC_ICON" 2>/dev/null | awk '/pixelHeight/ {print $2}')
     echo "  → Using user-provided icon: $SRC_ICON (${src_w}×${src_h})"
-    resize "$SRC_ICON" "$BASE_1024" 1024
+    # Strip black background first
+    CLEAN_ICON="${SRC_ICON%.png}-clean.png"
+    remove_black_bg "$SRC_ICON" "$CLEAN_ICON"
+    resize "$CLEAN_ICON" "$BASE_1024" 1024
 else
     echo "  → No $SRC_ICON found — generating fallback"
     generate_fallback "$BASE_1024" 1024
@@ -182,11 +245,14 @@ LOGO_DIR="$SRCROOT/Resources/Assets.xcassets/Logo.imageset"
 LOGO_DST="$LOGO_DIR/logo.png"
 mkdir -p "$LOGO_DIR"
 if [ -f "$SRC_ICON" ]; then
-    cp "$SRC_ICON" "$LOGO_DST"
-    echo "  → Copied user icon → Logo.imageset/logo.png"
+    cp "$CLEAN_ICON" "$LOGO_DST"
+    echo "  → Copied cleaned icon → Logo.imageset/logo.png"
 else
     cp "$BASE_1024" "$LOGO_DST"
     echo "  → Copied fallback icon → Logo.imageset/logo.png"
 fi
+
+# Also copy to Resources/ for bundle loading
+cp "$LOGO_DST" "$SRCROOT/Resources/logo.png"
 
 echo '==> Icons generated successfully!'

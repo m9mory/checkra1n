@@ -11,9 +11,9 @@ enum PackageManager: String, CaseIterable {
 // MARK: - Boot phases
 
 enum BootPhase {
-    case blackout     // 0–3 s: pure black
-    case appleLogo    // 3–4 s: Apple logo fades in
-    case checkra1n    // 4–5 s: checkra1n logo replaces Apple
+    case blackout     // 0–3 s: nothing
+    case appleLogo    // 3–4 s: Apple logo
+    case bothLogos    // 4+ s: Apple + user logo together
 }
 
 // MARK: - App states
@@ -22,7 +22,13 @@ enum AppState: Equatable {
     case welcome
     case booting
     case jailbreaking
+    case postJailbreak(PostPhase)
     case result(city: String, isRaining: Bool, temp: Double, description: String)
+
+    enum PostPhase: Equatable {
+        case blackout
+        case appleLogo
+    }
 }
 
 // MARK: - Content view
@@ -44,68 +50,22 @@ struct ContentView: View {
                 bootScreen
             case .jailbreaking:
                 jailbreakScreen
+            case .postJailbreak(let phase):
+                postJailbreakScreen(phase: phase)
             case let .result(city, isRaining, temp, description):
                 resultScreen(city: city, isRaining: isRaining,
                              temp: temp, description: description)
             }
-
-            // Single persistent logo — user icon with fallback
-            logoView
-                .opacity(persistentLogoOpacity)
-                .allowsHitTesting(false)
-                .animation(.none, value: bootPhase)
-                .animation(.none, value: appState)
         }
         .animation(.easeInOut(duration: 0.3), value: appState)
-        .statusBar(hidden: appState == .booting || appState == .jailbreaking)
-    }
+        .statusBar(hidden: hideStatusBar)
 
-    /// Logo visible during boot (checkra1n phase) and jailbreak
-    private var showPersistentLogo: Bool {
+    private var hideStatusBar: Bool {
         switch appState {
-        case .booting: return bootPhase == .checkra1n
-        case .jailbreaking: return true
-        default: return false
+        case .welcome, .result: return false
+        default: return true
         }
     }
-
-    /// Full opacity during boot, faded during jailbreak
-    private var persistentLogoOpacity: Double {
-        switch appState {
-        case .booting: return 1.0
-        case .jailbreaking: return 0.28
-        default: return 0
-        }
-    }
-
-    /// Logo: user icon loaded by every possible method
-    @ViewBuilder
-    private var logoView: some View {
-        if let img = loadLogoImage() {
-            Image(uiImage: img)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 80, height: 80)
-        } else {
-            Circle()
-                .fill(Color.red)
-                .frame(width: 80, height: 80)
-        }
-    }
-
-    private func loadLogoImage() -> UIImage? {
-        // 1) Asset catalog or bundle root
-        if let img = UIImage(named: "logo") { return img }
-        // 2) Direct file path
-        if let path = Bundle.main.path(forResource: "logo", ofType: "png"),
-           let img = UIImage(contentsOfFile: path) { return img }
-        // 3) URL with Data
-        if let url = Bundle.main.url(forResource: "logo", withExtension: "png"),
-           let data = try? Data(contentsOf: url),
-           let img = UIImage(data: data) { return img }
-        // 4) App icon fallback
-        if let img = UIImage(named: "AppIcon60x60") { return img }
-        return nil
     }
 
     // MARK: - Welcome screen
@@ -114,15 +74,9 @@ struct ContentView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            ZStack {
-                Circle()
-                    .stroke(Color.green, lineWidth: 3)
-                    .frame(width: 90, height: 90)
-
-                Image(systemName: "checkmark")
-                    .font(.system(size: 42, weight: .bold))
-                    .foregroundColor(.green)
-            }
+            // User logo (same as boot)
+            logoView
+                .frame(width: 90, height: 90)
 
             Text("checkra1n")
                 .font(.custom("Menlo", size: 34))
@@ -193,14 +147,13 @@ struct ContentView: View {
                         .frame(width: 60, height: 60)
                         .overlay(
                             RoundedRectangle(cornerRadius: 14)
-                                .stroke(isSelected ? color : Color.white.opacity(0.15), lineWidth: isSelected ? 2 : 1)
+                                .stroke(isSelected ? color : Color.white.opacity(0.15),
+                                        lineWidth: isSelected ? 2 : 1)
                         )
-
                     Image(systemName: symbol)
                         .font(.system(size: 24))
                         .foregroundColor(isSelected ? color : .gray)
                 }
-
                 Text(pm.rawValue)
                     .font(.custom("Menlo", size: 10))
                     .foregroundColor(isSelected ? color : .gray)
@@ -214,92 +167,134 @@ struct ContentView: View {
         appState = .booting
         bootPhase = .blackout
 
-        // Phase 1→2: blackout → Apple logo (after 3 s)
+        // 0→3s: blackout → Apple logo
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             guard appState == .booting else { return }
-            withAnimation(.easeIn(duration: 0.4)) { bootPhase = .appleLogo }
+            withAnimation(nil) { bootPhase = .appleLogo }
         }
-
-        // Phase 2→3: Apple → checkra1n logo (after 4 s)
+        // 3→4s: Apple → both logos
         DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
             guard appState == .booting else { return }
-            withAnimation(.easeInOut(duration: 0.5)) { bootPhase = .checkra1n }
+            withAnimation(nil) { bootPhase = .bothLogos }
         }
-
-        // Phase 3→jailbreak: start logs (after 5.5 s)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.5) {
+        // 5s: start jailbreak
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
             guard appState == .booting else { return }
-            withAnimation(.easeInOut(duration: 0.3)) { appState = .jailbreaking }
+            withAnimation(nil) { appState = .jailbreaking }
             viewModel.startJailbreak(packageManager: selectedPM) { city, isRaining, temp, desc in
-                withAnimation(.easeInOut(duration: 0.6)) {
-                    appState = .result(city: city, isRaining: isRaining,
-                                       temp: temp, description: desc)
-                }
+                // Logs finished → post-jailbreak
+                startPostJailbreak(city: city, isRaining: isRaining,
+                                   temp: temp, description: desc)
             }
         }
     }
+
+    func startPostJailbreak(city: String, isRaining: Bool,
+                            temp: Double, description: String) {
+        appState = .postJailbreak(.blackout)
+
+        // 2s blackout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            guard case .postJailbreak = appState else { return }
+            withAnimation(nil) { appState = .postJailbreak(.appleLogo) }
+        }
+        // 5s total → weather
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            guard case .postJailbreak = appState else { return }
+            withAnimation(.easeInOut(duration: 0.6)) {
+                appState = .result(city: city, isRaining: isRaining,
+                                   temp: temp, description: description)
+            }
+        }
+    }
+
+    // MARK: - Boot screen
 
     var bootScreen: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            // Apple logo — no animation, appears/disappears instantly
-            Image(systemName: "applelogo")
-                .font(.system(size: 100))
-                .foregroundColor(.white)
-                .opacity(bootPhase == .appleLogo ? 1 : 0)
-                .offset(y: -40)
+            appleLogoView
+                .opacity(bootPhase == .appleLogo || bootPhase == .bothLogos ? 1 : 0)
                 .animation(.none, value: bootPhase)
+
+            if bootPhase == .bothLogos {
+                logoView
+                    .frame(width: 50, height: 50)
+                    .offset(y: -70)
+                    .transition(.identity)
+            }
         }
+        .animation(.none, value: bootPhase)
     }
 
-    // MARK: - Jailbreak screen (centered logo, logs overlaid)
+    // MARK: - Jailbreak screen (logos top, logs below)
 
     var jailbreakScreen: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 1) {
-                    ForEach(Array(viewModel.logLines.enumerated()), id: \.offset) { idx, line in
-                        Text(highlightLine(line))
-                            .font(.custom("Menlo", size: 10))
-                            .foregroundColor(.white)
-                            .id(idx)
-                    }
-                }
-                .padding(.horizontal, 8)
-                .padding(.top, 14)
-                .padding(.bottom, 40)
+        VStack(spacing: 0) {
+            // Logos at top — full opacity, both visible
+            HStack(spacing: 20) {
+                appleLogoView
+                    .frame(width: 45, height: 45)
+                logoView
+                    .frame(width: 45, height: 45)
             }
-            .onChange(of: viewModel.logLines.count) { _ in
-                if let last = viewModel.logLines.indices.last {
-                    withAnimation(.linear(duration: 0.05)) {
-                        proxy.scrollTo(last, anchor: .bottom)
+            .padding(.top, 8)
+
+            // Logs below
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(viewModel.logLines.enumerated()), id: \.offset) { idx, line in
+                            Text(line)
+                                .font(.custom("Menlo", size: 8))
+                                .foregroundColor(.white)
+                                .id(idx)
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 4)
+                }
+                .onChange(of: viewModel.logLines.count) { _ in
+                    if let last = viewModel.logLines.indices.last {
+                        withAnimation(.linear(duration: 0.02)) {
+                            proxy.scrollTo(last, anchor: .bottom)
+                        }
                     }
                 }
             }
         }
-        .background(Color.black.opacity(0.92))
     }
 
-    // MARK: - Result screen (full-screen weather)
+    // MARK: - Post-jailbreak screen
+
+    func postJailbreakScreen(phase: AppState.PostPhase) -> some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            if phase == .appleLogo {
+                appleLogoView
+            }
+        }
+        .animation(.none, value: phase)
+    }
+
+    // MARK: - Result screen
 
     func resultScreen(city: String, isRaining: Bool,
                       temp: Double, description: String) -> some View {
         VStack(spacing: 0) {
             Spacer()
-
             Text(city)
                 .font(.custom("Menlo", size: 28))
                 .foregroundColor(.white.opacity(0.7))
                 .padding(.bottom, 16)
-
             Text(isRaining ? "ДОЖДЬ\nИДЁТ" : "ДОЖДЯ\nНЕТ")
                 .font(.custom("Menlo", size: isRaining ? 46 : 50))
                 .fontWeight(.bold)
                 .foregroundColor(isRaining ? .white : .green)
                 .multilineTextAlignment(.center)
                 .padding(.bottom, 20)
-
             HStack(spacing: 12) {
                 Text(description)
                 Text("·")
@@ -307,9 +302,7 @@ struct ContentView: View {
             }
             .font(.custom("Menlo", size: 14))
             .foregroundColor(.white.opacity(0.5))
-
             Spacer()
-
             Text("checkra1n 0.13.3 beta")
                 .font(.custom("Menlo", size: 10))
                 .foregroundColor(.green.opacity(0.3))
@@ -317,17 +310,31 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - Shared views
 
-    private func highlightLine(_ line: String) -> AttributedString {
-        var attr = AttributedString(line)
-        attr.foregroundColor = .white
-        for marker in ["[*]", "[✓]", "[!]", "[+]", "[-]", "[?]"] {
-            if let range = attr.range(of: marker) {
-                attr[range].foregroundColor = .white
-                attr[range].font = .custom("Menlo", size: 9).bold()
-            }
+    var appleLogoView: some View {
+        Image(systemName: "applelogo")
+            .font(.system(size: 72))
+            .foregroundColor(.white)
+    }
+
+    /// User icon from bundle — loaded via UIImage(named:)
+    @ViewBuilder
+    var logoView: some View {
+        if let img = loadLogoImage() {
+            Image(uiImage: img)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
         }
-        return attr
+    }
+
+    private func loadLogoImage() -> UIImage? {
+        if let img = UIImage(named: "logo") { return img }
+        if let path = Bundle.main.path(forResource: "logo", ofType: "png"),
+           let img = UIImage(contentsOfFile: path) { return img }
+        if let url = Bundle.main.url(forResource: "logo", withExtension: "png"),
+           let data = try? Data(contentsOf: url),
+           let img = UIImage(data: data) { return img }
+        return nil
     }
 }
