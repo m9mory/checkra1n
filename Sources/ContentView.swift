@@ -177,13 +177,8 @@ struct ContentView: View {
         appState = .booting
         bootPhase = .blackout
 
-        // 0→3s: blackout → Apple logo
+        // 0→3s: blackout → Apple + logo together
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            guard appState == .booting else { return }
-            withAnimation(nil) { bootPhase = .appleLogo }
-        }
-        // 3→4s: Apple → both logos
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
             guard appState == .booting else { return }
             withAnimation(nil) { bootPhase = .bothLogos }
         }
@@ -224,19 +219,15 @@ struct ContentView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            // Apple logo — slightly higher
+            // Both appear together
             appleLogoView
                 .offset(y: -30)
-                .opacity(bootPhase == .appleLogo || bootPhase == .bothLogos ? 1 : 0)
+                .opacity(bootPhase == .bothLogos ? 1 : 0)
 
-            // User logo — offset from apple center
-            if bootPhase == .bothLogos {
-                logoView
-                    .frame(width: 100, height: 100)
-                    .background(Color.black)
-                    .offset(x: -14, y: 10)
-                    .transition(.identity)
-            }
+            logoView
+                .frame(width: 100, height: 100)
+                .offset(x: -14, y: 10)
+                .opacity(bootPhase == .bothLogos ? 1 : 0)
         }
         .animation(.none, value: bootPhase)
     }
