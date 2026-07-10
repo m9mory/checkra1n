@@ -59,13 +59,13 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: appState)
         .statusBar(hidden: hideStatusBar)
+    }
 
     private var hideStatusBar: Bool {
         switch appState {
         case .welcome, .result: return false
         default: return true
         }
-    }
     }
 
     // MARK: - Welcome screen
