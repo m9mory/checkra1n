@@ -259,6 +259,7 @@ struct ContentView: View {
                         }
                     }
                 }
+                .allowsHitTesting(false)
                 .onChange(of: viewModel.logLines.count) { _ in
                     if let last = viewModel.logLines.indices.last {
                         withAnimation(.linear(duration: 0.02)) {
