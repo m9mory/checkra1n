@@ -214,12 +214,12 @@ struct ContentView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            // Centered logos — same position as jailbreak screen
-            VStack(spacing: 14) {
+            // Centered logos — user logo ON TOP of apple logo
+            ZStack {
                 appleLogoView
                 if bootPhase == .bothLogos {
                     logoView
-                        .frame(width: 80, height: 80)
+                        .frame(width: 100, height: 100)
                         .transition(.identity)
                 }
             }
@@ -228,20 +228,13 @@ struct ContentView: View {
         .animation(.none, value: bootPhase)
     }
 
-    // MARK: - Jailbreak screen (logos centered, logs at bottom)
+    // MARK: - Jailbreak screen (logos centered, full-screen logs behind)
 
     var jailbreakScreen: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             Color.black.ignoresSafeArea()
 
-            // Centered logos — same as boot, stay in place
-            VStack(spacing: 14) {
-                appleLogoView
-                logoView
-                    .frame(width: 80, height: 80)
-            }
-
-            // Logs at the bottom
+            // Full-screen logs
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
@@ -253,8 +246,8 @@ struct ContentView: View {
                         }
                     }
                     .padding(.horizontal, 4)
+                    .padding(.vertical, 4)
                 }
-                .frame(height: 160)
                 .onChange(of: viewModel.logLines.count) { _ in
                     if let last = viewModel.logLines.indices.last {
                         withAnimation(.linear(duration: 0.02)) {
@@ -263,6 +256,14 @@ struct ContentView: View {
                     }
                 }
             }
+
+            // Centered logos ON TOP — user logo over apple logo
+            ZStack {
+                appleLogoView
+                logoView
+                    .frame(width: 100, height: 100)
+            }
+            .allowsHitTesting(false)
         }
     }
 
