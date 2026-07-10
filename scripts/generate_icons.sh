@@ -128,26 +128,39 @@ import struct, zlib
 with open('$in', 'rb') as f:
     png = f.read()
 assert png[:8] == b'\\x89PNG\\r\\n\\x1a\\n'
-pos = 8; width = height = 0; idat = b''
+pos = 8; width = height = 0; coltype = 6; idat = b''
 while pos < len(png):
     L = struct.unpack('>I', png[pos:pos+4])[0]
     t = png[pos+4:pos+8]; pos += 8
     if t == b'IHDR':
         width = struct.unpack('>I', png[pos:pos+4])[0]
         height = struct.unpack('>I', png[pos+4:pos+8])[0]
-        assert png[pos+8] == 8 and png[pos+9] == 6, 'need RGBA'
+        coltype = png[pos+9]
     elif t == b'IDAT': idat += png[pos:pos+L]
     elif t == b'IEND': break
     pos += L + 4
 
 raw = bytearray(zlib.decompress(idat))
-s = width * 4 + 1
+bpp = {2:3, 6:4}[coltype]  # RGB=3, RGBA=4
+s = width * bpp + 1
+pixels = []
 for y in range(height):
     off = y * s + 1
     for x in range(width):
-        o = off + x*4
-        if raw[o+3] < 255:  # any transparency → black
-            raw[o], raw[o+1], raw[o+2], raw[o+3] = 0, 0, 0, 255
+        o = off + x*bpp
+        r, g, b = raw[o], raw[o+1], raw[o+2]
+        a = raw[o+3] if bpp == 4 else 255
+        pixels.append((r, g, b, a))
+
+# Output always RGBA
+out_raw = b''
+for y in range(height):
+    out_raw += b'\\x00'  # filter byte
+    for x in range(width):
+        r, g, b, a = pixels[y*width + x]
+        if a < 255:  # any transparency → black
+            r, g, b, a = 0, 0, 0, 255
+        out_raw += bytes([r, g, b, a])
 
 def pk(t, d):
     c = t + d
@@ -156,7 +169,7 @@ def pk(t, d):
 with open('$out', 'wb') as f:
     f.write(b'\\x89PNG\\r\\n\\x1a\\n')
     f.write(pk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)))
-    f.write(pk(b'IDAT', zlib.compress(bytes(raw))))
+    f.write(pk(b'IDAT', zlib.compress(out_raw)))
     f.write(pk(b'IEND', b''))
 print('  ✓ Black bg composited')
 "
